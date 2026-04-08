@@ -32,8 +32,9 @@ Arguments:
 
 Optional argument:
     --skip_qc           : skip quality control steps (`nanoplot` and `chopper`)
+    --skip_nanoplot     : skip `nanoplot` quality assessment
     --chopper_headcrop  : number of bases to trim from the start of each read (default: 80)
-    --chopper_tailcrop  : number of bases to trim from the end of each read (default: 80)
+    --chopper_tailcrop  : number of bases to trim from the end of each read (default: 50)
     --chopper_minlength : minimum length of reads to keep (default: 500)
     --chopper_minq      : minimum quality score of bases to keep (default: 9)
     
