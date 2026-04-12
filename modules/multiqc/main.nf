@@ -1,25 +1,4 @@
 process MULTIQC {
-
-    label "medium"
-
-    publishDir "${params.outdir}/multiqc", mode: 'copy'
-
-    input:
-    path multiqc_files, stageAs: "?/*"
-
-    output:
-    path "*.html", emit: report
-    path "*_data", emit: data
-
-    """
-    cp ${projectDir}/assets/* .
-    multiqc -c ./multiqc_config.yml .
-    mv *.html multiqc_${params.exp}.html
-    mv *_data multiqc_${params.exp}_data
-    """
-}
-
-process MULTIQC {
     
     label 'small'
 
@@ -40,7 +19,7 @@ process MULTIQC {
     """
     cp ${projectDir}/assets/* .
     multiqc -c ./multiqc_config.yml .
-    mv *.html multiqc_${params.exp}.html
-    mv *_data multiqc_${params.exp}_data
+    mv *.html multiqc_roshab-cli.html
+    mv *_data multiqc_roshab-cli_data
     """
 }

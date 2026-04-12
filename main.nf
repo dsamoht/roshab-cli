@@ -18,10 +18,9 @@ info = """
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Usage:
 
-     nextflow run main.nf --exp [NAME] --input [PATH] --outdir [PATH]
+     nextflow run main.nf --input [PATH] --outdir [PATH]
 
 Arguments:
-    --exp    [NAME] : name of the experiment
     --outdir [PATH] : path to output directory (will be created if non-existant)
     --input  [PATH] : path to a samplesheet (CSV) with the following columns:
                     sample_name,date,site,group,reads
@@ -53,14 +52,9 @@ if ( !params.input) {
     exit 1
 }
 
-if ( !params.exp) {
-    log.info "Error: experiment name not specified."
-    exit 1
-}
-
 if ( !params.outdir) {
-    log.info "Warning: output directory not specified. Using default: `roshab_output`"
-    params.outdir = 'roshab_output'
+    log.info "Warning: output directory not specified. Using default: `roshab-cli_output`"
+    params.outdir = 'roshab-cli_output'
 }
 
 workflow {
