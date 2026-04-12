@@ -1,4 +1,4 @@
 sample_name,group,info,date,reads
 test3,test,chalet,20260312,./test/data/TEST3_ONT.fastq.gz
 test4,test,pont,20260312,./test/data/TEST4_ONT.fastq.gz
-nanosim,test,nanosim,20260312,./test/data/nostoc_sp_CENA543_sim.fastq
+nanosim,test,nanosim,20260312,./test/data/nostoc_sp_CENA543_sim.fastq.gz
