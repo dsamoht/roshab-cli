@@ -26,8 +26,8 @@ Arguments:
                     sample_name,date,site,group,reads
 
     --kraken_db     : path to decommpressed `kraken` database
-    --genomes_db    : path to decommpressed genomes database (https://zenodo.org/records/15659134/files/cyanobacteriota_ncbi_dRep_n220.tar.gz)
-    --genes_db      : path to cyanotoxin-related genes database (https://zenodo.org/records/15659134/files/BGC_cyanotoxins_plus_orthologs.fna)
+    --genomes_db    : path to decommpressed genomes database (https://zenodo.org/records/19522349/files/cyanobacteriota_ncbi_dRep_n220.tar.gz)
+    --genes_db      : path to cyanotoxin-related genes database (https://zenodo.org/records/19522349/files/core_cyanotoxin-related_gene_mibig-v4_antismash-v8.faa)
 
 Optional argument:
     --skip_qc           : skip quality control steps (`nanoplot` and `chopper`)
@@ -55,6 +55,21 @@ if ( !params.input) {
 if ( !params.outdir) {
     log.info "Warning: output directory not specified. Using default: `roshab-cli_output`"
     params.outdir = 'roshab-cli_output'
+}
+
+if ( !params.kraken_db) {
+    log.info "Error: Kraken database not specified."
+    exit 1
+}
+
+if ( !params.genomes_db) {
+    log.info "Error: Genomes database not specified."
+    exit 1
+}
+
+if ( !params.genes_db) {
+    log.info "Error: Genes database not specified."
+    exit 1
 }
 
 workflow {
