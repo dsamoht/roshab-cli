@@ -14,7 +14,7 @@ process COVERM {
     val db_name
 
     output:
-    tuple val(group_id), path('*.coverm.tsv'), emit: coverm_out
+    tuple val(group_id), path('*.coverm.tsv'), emit: coverm_out, optional : true
 
     script:
     def names = metas.collect { meta -> meta.sample_name }

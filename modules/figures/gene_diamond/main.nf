@@ -4,13 +4,15 @@ process PLOT_GENE_DIAMOND {
 
     container params.python_container
 
+    errorStrategy 'ignore'
+
     publishDir "${params.outdir}/figures", mode: 'copy'
 
     input:
     path diamond_tsvs
 
     output:
-    path "cyanotoxins_heatmap.pdf", emit: pdf
+    path "cyanotoxins_heatmap.pdf", emit: pdf, optional: true
 
     script:
     """

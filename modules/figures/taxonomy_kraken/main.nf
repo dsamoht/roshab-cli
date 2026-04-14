@@ -2,6 +2,8 @@ process PLOT_KRAKEN {
 
     label "small"
 
+    errorStrategy 'ignore'
+
     publishDir "${params.outdir}/figures", mode: 'copy'
 
     container params.python_container
@@ -11,7 +13,7 @@ process PLOT_KRAKEN {
     path samplesheet
 
     output:
-    tuple val(group_id), path('*.pdf'), emit: figure_file
+    tuple val(group_id), path('*.pdf'), emit: figure_file, optional: true
 
     script:
     """

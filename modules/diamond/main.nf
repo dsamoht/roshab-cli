@@ -13,7 +13,7 @@ process DIAMOND_BLASTX {
     path(db_file)
 
     output:
-    tuple val(meta), path("*.diamond.tsv"), emit: tsv
+    tuple val(meta), path("*.diamond.tsv"), emit: tsv, optional: true
     path "versions.yml"                   , emit: versions
 
     script:
