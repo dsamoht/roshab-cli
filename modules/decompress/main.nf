@@ -20,7 +20,8 @@ process DECOMPRESS {
     elif [[ "${input_path}" == *.tar.gz ]] || [[ "${input_path}" == *.tgz ]]; then
         echo "Input is an archive. Extracting..."
         mkdir tmp_extracted
-        tar -xzf "${input_path}" -C tmp_extracted
+        tar -xzf "${input_path}" -C tmp_extracted \
+        --exclude='._*' --exclude='__MACOSX' --exclude='.DS_Store'
         
         # 3. Smart extraction handling
         TOP_LEVEL_COUNT=\$(ls -1A tmp_extracted | wc -l)
