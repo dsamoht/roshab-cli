@@ -4,7 +4,7 @@ process PLOT_KRAKEN {
 
     errorStrategy 'ignore'
 
-    publishDir "${params.outdir}/figures", mode: 'copy'
+    //publishDir "${params.outdir}/figures", mode: 'copy'
 
     container params.python_container
 

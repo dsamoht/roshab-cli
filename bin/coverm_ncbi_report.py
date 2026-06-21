@@ -10,13 +10,13 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input',       help='coverm output table',   required=True)
     parser.add_argument('-n', '--name',        help='name for the output',   required=True)
-    parser.add_argument('-s', '--samplesheet', help='samplesheet CSV (sample_name,date,info,group,reads)', required=True)
+    parser.add_argument('-s', '--samplesheet', help='samplesheet CSV (sample_id,date,info,group,reads)', required=True)
     return parser.parse_args()
 
 def load_samplesheet(path):
     ss = pd.read_csv(path)
     return {
-        str(row['sample_name']): {'date': str(row['date']), 'site': str(row['info'])}
+        str(row['sample_id']): {'date': str(row['date']), 'site': str(row['info'])}
         for _, row in ss.iterrows()
     }
 
@@ -56,7 +56,7 @@ def plot_spatial(df, pdf_handle, metadata):
         figsize=(10, 6),
         ylabel='coverage',
         xlabel='site',
-        title=f'{date_label} - coverage of Cyanobacteria genomes (NCBI)'
+        title=f'{date_label} - genome coverage'
     )
     ax.legend(title='', bbox_to_anchor=(1.02, 0.5), loc='center left', borderaxespad=0)
     plt.tight_layout()
@@ -99,7 +99,7 @@ def plot_longitudinal(df, pdf_handle, metadata):
             figsize=(10, 6),
             ylabel='coverage',
             xlabel='Date',
-            title=f'{site} - coverage of Cyanobacteria genomes (NCBI)'
+            title=f'{site} - genome coverage'
         )
         ax.legend(title='', bbox_to_anchor=(1.02, 0.5), loc='center left', borderaxespad=0)
         plt.tight_layout()
@@ -113,7 +113,7 @@ def main():
     df       = pd.read_csv(args.input, sep='\t', header=0, index_col=0)
     df       = extract_trimmed_mean(df)
 
-    with PdfPages(f"{name}_coverm_cyano_ncbi_barplots.pdf") as pdf_out:
+    with PdfPages(f"group_{name}_coverm_genome_coverage_barplots.pdf") as pdf_out:
         plot_spatial(df,      pdf_out, metadata)
         plot_longitudinal(df, pdf_out, metadata)
 

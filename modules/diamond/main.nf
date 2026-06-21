@@ -2,11 +2,11 @@ process DIAMOND_BLASTX {
 
     label 'medium'
 
-    tag "${meta.sample_name}"
+    tag "${meta.sample_id}"
 
     container params.diamond_container
 
-    publishDir "${params.outdir}/group_${meta.group}/diamond", mode: 'copy'
+    //publishDir "${params.outdir}/group_${meta.group}/diamond", mode: 'copy'
 
     input:
     tuple val(meta), path(reads)
@@ -17,12 +17,12 @@ process DIAMOND_BLASTX {
     path "versions.yml"                   , emit: versions
 
     script:
-    def sample_name = meta.sample_name
+    def sample_id = meta.sample_id
     """
     diamond blastx \\
         --db ${db_file} \\
         --query ${reads} \\
-        --out ${sample_name}.diamond.tsv \\
+        --out ${sample_id}.diamond.tsv \\
         --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen \\
         --header \\
         --threads ${task.cpus} \\

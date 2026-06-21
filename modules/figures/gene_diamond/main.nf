@@ -6,18 +6,18 @@ process PLOT_GENE_DIAMOND {
 
     errorStrategy 'ignore'
 
-    publishDir "${params.outdir}/figures", mode: 'copy'
+    //publishDir "${params.outdir}/figures", mode: 'copy'
 
     input:
-    path diamond_tsvs
+    tuple val(group_id), path(diamond_tsvs)
 
     output:
-    path "cyanotoxins_heatmap.pdf", emit: pdf, optional: true
+    tuple val(group_id), path("*_cyanotoxins_heatmap.pdf"), emit: pdf, optional: true
 
     script:
     """
     plot_gene_diamond.py \\
         --input ${diamond_tsvs} \\
-        --output cyanotoxins_heatmap.pdf
+        --output group_${group_id}_cyanotoxins_heatmap.pdf
     """
 }

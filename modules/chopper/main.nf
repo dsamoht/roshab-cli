@@ -2,11 +2,11 @@ process CHOPPER {
 
     label "medium"
    
-    tag "${meta.sample_name}"
+    tag "${meta.sample_id}"
 
     container params.chopper_container
 
-    publishDir "${params.outdir}/group_${meta.group}/reads_qc/chopper/", mode: "copy"
+    //publishDir "${params.outdir}/group_${meta.group}/reads_qc/chopper/", mode: "copy"
 
     input:
     tuple val(meta), path(reads)
@@ -22,7 +22,7 @@ process CHOPPER {
         | chopper --tailcrop ${params.chopper_tailcrop} --threads ${task.cpus} \
         | chopper -l ${params.chopper_minlength} --threads ${task.cpus} \
         | chopper -q ${params.chopper_minq} --threads ${task.cpus} \
-        | gzip > ${meta.sample_name}.choppered.fastq.gz
+        | gzip > ${meta.sample_id}.choppered.fastq.gz
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

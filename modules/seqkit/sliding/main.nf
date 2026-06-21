@@ -2,7 +2,7 @@ process SEQKIT_SLIDING {
     
     label "medium"
    
-    tag "${meta.sample_name}"
+    tag "${meta.sample_id}"
 
     container params.seqkit_container
 
@@ -21,7 +21,7 @@ process SEQKIT_SLIDING {
         --step ${params.bracken_length} \\
         --window ${params.bracken_length} \\
         --threads ${task.cpus} \\
-        -o ${meta.sample_name}.${params.bracken_length}bp.fastq
+        -o ${meta.sample_id}.${params.bracken_length}bp.fastq
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

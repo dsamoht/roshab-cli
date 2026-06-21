@@ -6,7 +6,7 @@ process KRAKENTOOLS_COMBINEMPA {
 
     container params.krakentools_container
 
-    publishDir "${params.outdir}/group_${group_id}/bracken", mode: 'copy'
+    //publishDir "${params.outdir}/group_${group_id}/bracken", mode: 'copy'
 
     input:
     tuple val(group_id), val(metas), path(files)

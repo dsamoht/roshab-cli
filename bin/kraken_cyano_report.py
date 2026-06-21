@@ -17,14 +17,14 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input',       help='combined (multiple samples) kraken report', required=True)
     parser.add_argument('-n', '--name',        help='name associated to the input report',        required=True)
-    parser.add_argument('-s', '--samplesheet', help='samplesheet CSV (sample_name,date,info,group,reads)', required=True)
+    parser.add_argument('-s', '--samplesheet', help='samplesheet CSV (sample_id,date,info,group,reads)', required=True)
     return parser.parse_args()
 
 def load_samplesheet(path):
-    """Return a dict mapping sample_name -> {'date': ..., 'site': ...}."""
+    """Return a dict mapping sample_id -> {'date': ..., 'site': ...}."""
     ss = pd.read_csv(path)
     return {
-        str(row['sample_name']): {'date': str(row['date']), 'site': str(row['info'])}
+        str(row['sample_id']): {'date': str(row['date']), 'site': str(row['info'])}
         for _, row in ss.iterrows()
     }
 
@@ -121,7 +121,7 @@ def main():
     name     = args.name.strip().replace(' ', '_')
     df       = pd.read_csv(args.input, sep='\t', header=0, index_col=0)
 
-    with PdfPages(f"{name}_kraken_cyano_barplots.pdf") as pdf_out:
+    with PdfPages(f"group_{name}_kraken_cyano_barplots.pdf") as pdf_out:
         plot_spatial(df,      pdf_out, metadata)
         plot_longitudinal(df, pdf_out, metadata)
 

@@ -2,7 +2,7 @@ process KRAKEN {
 
     label "large"
 
-    tag "${meta.sample_name}"
+    tag "${meta.sample_id}"
 
     container params.kraken_container
 
@@ -15,14 +15,14 @@ process KRAKEN {
     tuple val(meta), path('*.kraken.out'), emit: kraken_stdout
 
     script:
-    def sample_name = meta.sample_name
+    def sample_id = meta.sample_id
     """
     kraken2 \\
         --db ${db} \\
-        --report ${sample_name}.kraken \\
+        --report ${sample_id}.kraken \\
         --threads ${task.cpus} \\
         ${reads} \\
-        > ${sample_name}.kraken.out
+        > ${sample_id}.kraken.out
     
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

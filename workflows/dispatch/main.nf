@@ -2,25 +2,29 @@
 
 workflow DISPATCH {
 
-    ch_input = Channel
-        .from(file(params.input))
+    emit:
+    channel
+        .fromPath(params.input, checkIfExists: true)
         .splitCsv(header: true)
         .map { row ->
-                if (row.size() == 5) {
-                    def sample_name = row.sample_name
-                    def date = row.date
-                    def info = row.info
-                    def group = row.group
-                    def reads = file(row.reads, checkIfExists: true)
 
-                    return [ [  sample_name : sample_name, date: date, info: info, group: group ], reads ]
-     
-                } else {
-                    exit 1, "Error in ${params.input}. Each row must contain 5 columns."
-                }
+            def expectedKeys = ['sample_id', 'date', 'info', 'group', 'reads']
+
+
+            if (!row.keySet().containsAll(expectedKeys)) {
+                error "Error in ${params.input}: missing or incorrect columns. Expected: ${expectedKeys}. Found: ${row.keySet()}"
+            }
+
+            if (row.values().any { it == null || it.toString().trim() == '' }) {
+                error "Error in ${params.input}: Row contains missing values -> ${row}"
+            }
+
+            def sample_id = row.sample_id
+            def date      = row.date
+            def info      = row.info
+            def group     = row.group
+            def reads     = file(row.reads, checkIfExists: true)
+            
+            return [ [ sample_id: sample_id, date: date, info: info, group: group ], reads ]
         }
-
-    emit:
-    ch_input
-
 }

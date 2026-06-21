@@ -8,7 +8,7 @@
  |_|  \___/|___/_| |_|\__,_|_.__/       \___|_|_|
 
      github: https://github.com/dsamoht/roshab-cli
-     version: 0.1.0
+     version: 1.0.0
 ```
 
 ### Introduction

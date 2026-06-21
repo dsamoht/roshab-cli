@@ -2,11 +2,11 @@ process NANOPLOT {
 
     label "small"
 
-    tag "${meta.sample_name}"
+    tag "${meta.sample_id}"
 
     container params.nanoplot_container
 
-    publishDir "${params.outdir}/group_${meta.group}/reads_qc/nanoplot_${step}/${meta.sample_name}", mode: "copy"
+    //publishDir "${params.outdir}/group_${meta.group}/reads_qc/nanoplot_${step}/${meta.sample_id}", mode: "copy"
 
     input:
     tuple val(meta), val(step), path(fastq)

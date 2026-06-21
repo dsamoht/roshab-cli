@@ -2,7 +2,7 @@ process CONCATENATE_READS {
 
     label "small"
 
-    tag "${meta.sample_name}"
+    tag "${meta.sample_id}"
 
     container params.python_container
 
@@ -19,6 +19,6 @@ process CONCATENATE_READS {
     concatenate_reads.py \\
         ${prefix_arg} \\
         --fastq ${in_reads} \\
-        --output ${meta.sample_name}.fastq.gz
+        --output ${meta.sample_id}.fastq.gz
     """
 }

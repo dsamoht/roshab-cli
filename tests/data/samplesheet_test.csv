@@ -1,0 +1,4 @@
+sample_id,group,info,date,reads
+test3,test,chalet,20260312,https://github.com/dsamoht/roshab-cli/raw/refs/heads/main/tests/data/TEST3_ONT.fastq.gz
+test4,test,pont,20260312,https://github.com/dsamoht/roshab-cli/raw/refs/heads/main/tests/data/TEST4_ONT.fastq.gz
+nanosim,test,nanosim,20260312,https://github.com/dsamoht/roshab-cli/raw/refs/heads/main/tests/data/nostoc_sp_CENA543_sim.fastq.gz
