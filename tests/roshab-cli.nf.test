@@ -1,0 +1,14 @@
+nextflow_workflow {
+    name "test roshab-cli workflow"
+    script "main.nf"
+    workflow "ROSHAB-CLI"
+    options "-profile test,docker"
+
+    test("3 samples - 1 date - plot spatially") {
+
+        expect {
+            assert workflow.success
+            assert workflow.trace.succeeded().size() == 37
+        }
+    }
+}
