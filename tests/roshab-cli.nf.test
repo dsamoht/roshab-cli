@@ -1,7 +1,6 @@
-nextflow_workflow {
-    name "test roshab-cli workflow"
+nextflow_pipeline {
+    name "test `roshab-cli` pipeline"
     script "main.nf"
-    workflow "ROSHAB-CLI"
     options "-profile test,docker"
 
     test("3 samples - 1 date - plot spatially") {
