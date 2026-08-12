@@ -3,9 +3,10 @@ process ANTISMASH {
     label 'process_high'
 
     conda "${moduleDir}/environment.yml"
-    container "${workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container
-        ? 'https://depot.galaxyproject.org/singularity/antismash-lite:8.0.1--pyhdfd78af_0'
-        : 'quay.io/biocontainers/antismash-lite:8.0.1--pyhdfd78af_0'}"
+    // Same image as `ANTISMASH_DOWNLOAD`: antiSMASH re-checks its packaged profile
+    // HMMs on every run and rebuilds them when they are missing, which the
+    // biocontainer cannot do as a non-root user. See that module for the details
+    container "quay.io/nf-core/antismash:8.0.1--pyhdfd78af_0"
 
     input:
     tuple val(meta), path(contigs)

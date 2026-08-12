@@ -1,5 +1,5 @@
 process DECOMPRESS {
-    tag "${input_path.name}"
+    tag "${out_name}"
     label 'process_single'
 
     conda "${moduleDir}/environment.yml"
@@ -8,7 +8,10 @@ process DECOMPRESS {
         : 'nf-core/ubuntu:22.04'}"
 
     input:
-    path input_path
+    // Staged one directory down: a database installed by `--db_dir` is already
+    // called `<out_name>`, and staging it in the task directory under that same
+    // name would make the `ln -s` below resolve against the input itself
+    path input_path, stageAs: 'input/*'
     val out_name
 
     output:

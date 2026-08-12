@@ -104,8 +104,18 @@ nextflow run dsamoht/roshab-cli \
 > [!WARNING]
 > Provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/docs/usage/getting_started/configuration#custom-configuration-files).
 
-The reference databases are not downloaded by the pipeline. See
-[docs/usage.md](docs/usage.md) for where to get them.
+An analysis run never downloads a database. Install them once with `--db_dir`,
+which downloads every database into that directory and runs nothing else:
+
+```bash
+nextflow run dsamoht/roshab-cli \
+   -profile <docker/singularity/.../institute> \
+   --db_dir /the/path
+```
+
+`--install_databases kraken,genomes,genes` installs a subset. See
+[docs/usage.md](docs/usage.md) for the databases, their sizes and where they come
+from.
 
 ## Pipeline output
 

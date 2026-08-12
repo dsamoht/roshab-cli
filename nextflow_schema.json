@@ -99,6 +99,54 @@
                 }
             }
         },
+        "database_installation": {
+            "title": "Database installation",
+            "type": "object",
+            "fa_icon": "fas fa-download",
+            "description": "Download the reference databases instead of running an analysis.",
+            "help_text": "Setting `--db_dir` switches the run to database installation: the requested databases are downloaded into that directory, one directory per database, and no analysis step runs. Databases that are already present are skipped, so an interrupted install can simply be re-run.",
+            "properties": {
+                "db_dir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Directory to install the reference databases into. Setting it runs the database installation and nothing else.",
+                    "help_text": "Each database is installed into its own subdirectory: `kraken_db`, `genomes_db`, `genes_db`, `antismash_db`, `deepbgc_db` and `pfam_db`. The install run prints the parameter values to use afterwards.",
+                    "fa_icon": "fas fa-folder-open"
+                },
+                "install_databases": {
+                    "type": "string",
+                    "default": "all",
+                    "pattern": "^(all|(kraken|genomes|genes|antismash|deepbgc|pfam)(,(kraken|genomes|genes|antismash|deepbgc|pfam))*)$",
+                    "description": "Which databases to install with `--db_dir`: `all`, or a comma-separated list of `kraken`, `genomes`, `genes`, `antismash`, `deepbgc`, `pfam`.",
+                    "fa_icon": "fas fa-list-check"
+                },
+                "kraken_db_url": {
+                    "type": "string",
+                    "default": "https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_16_GB_20260626.tar.gz",
+                    "description": "Kraken2 index downloaded by `--db_dir`.",
+                    "help_text": "The default is the 16 GB capped PlusPF index. Any other index from https://benlangmead.github.io/aws-indexes/k2 can be used instead, as long as it contains `ktaxonomy.tsv`.",
+                    "fa_icon": "fas fa-link"
+                },
+                "genomes_db_url": {
+                    "type": "string",
+                    "default": "https://zenodo.org/records/19522349/files/cyanobacteriota_ncbi_dRep_n220.tar.gz",
+                    "description": "CoverM genome database downloaded by `--db_dir`.",
+                    "fa_icon": "fas fa-link"
+                },
+                "genes_db_url": {
+                    "type": "string",
+                    "default": "https://zenodo.org/records/19522349/files/core_cyanotoxin-related_gene_mibig-v4_antismash-v8.faa",
+                    "description": "Cyanotoxin gene database downloaded by `--db_dir`.",
+                    "fa_icon": "fas fa-link"
+                },
+                "pfam_db_url": {
+                    "type": "string",
+                    "default": "https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.gz",
+                    "description": "Pfam-A HMM profiles downloaded by `--db_dir`, used by BiG-SCAPE.",
+                    "fa_icon": "fas fa-link"
+                }
+            }
+        },
         "workflow_options": {
             "title": "Workflow options",
             "type": "object",
@@ -449,6 +497,7 @@
     "allOf": [
         { "$ref": "#/$defs/input_output_options" },
         { "$ref": "#/$defs/reference_databases" },
+        { "$ref": "#/$defs/database_installation" },
         { "$ref": "#/$defs/workflow_options" },
         { "$ref": "#/$defs/read_qc_options" },
         { "$ref": "#/$defs/taxonomic_profiling_options" },

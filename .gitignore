@@ -14,3 +14,5 @@ null/
 singularity_cache/
 apptainer_cache/
 tests/roshab-cli_out/
+CLAUDE.md
+tests/db_dir

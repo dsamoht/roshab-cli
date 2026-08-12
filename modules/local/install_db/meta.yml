@@ -1,0 +1,36 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: install_db
+description: Install a downloaded reference database into a directory of its own
+keywords:
+  - database
+  - download
+  - install
+  - untar
+tools:
+  - gnu-coreutils:
+      description: |
+        GNU core utilities, the basic file, shell and text manipulation utilities.
+      homepage: https://www.gnu.org/software/coreutils/
+      documentation: https://www.gnu.org/software/coreutils/
+      licence: ["GPL-3.0"]
+      identifier: ""
+input:
+  - - db_name:
+        type: string
+        description: Name of the directory the database is installed into
+    - source:
+        type: file
+        description: |
+          The downloaded database: a `.tar.gz`/`.tgz` archive, a gzipped file or a
+          plain file
+        ontologies: []
+output:
+  db:
+    - - "${db_name}":
+          type: directory
+          description: The installed database
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

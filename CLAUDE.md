@@ -17,6 +17,10 @@ nextflow run . -profile test,docker --outdir results
 # Assembly/BGC route — needs an antiSMASH database, which the test profile does not supply
 nextflow run . -profile test,docker,assembly --outdir results --antismash_db <PATH>
 
+# Install the reference databases (no analysis runs; `--outdir`/`--input` not needed)
+nextflow run . -profile docker --db_dir <PATH>
+nextflow run . -profile docker --db_dir <PATH> --install_databases kraken,genomes,genes
+
 # Tests. nf-test.config sets testsDir="." and profile="test"; tests/nextflow.config
 # points pipelines_testdata_base_path at tests/data/ on the `main` branch (i.e. remote,
 # not local — pushing test data is what makes it visible to a test run).
@@ -41,6 +45,7 @@ loose `*.nf` files. Same convention as the sibling `mag-ont` pipeline.
 main.nf                             ROSHAB_CLI + entry workflow + publish:/output{} targets
 workflows/longread_qc/              NanoPlot(raw) → Chopper → NanoPlot(qc)
 workflows/assembly_bgc/             assembly, gene calling and BGC screening
+workflows/db_install/               `--db_dir` route: download the reference databases
 subworkflows/local/pipeline_initialisation/   help, validation, sample sheet, shared helper functions
 subworkflows/local/pipeline_completion/       completion email and run summary
 subworkflows/nf-core/               vendored nf-core utils (tracked in modules.json)
@@ -61,6 +66,19 @@ adds `DIAMOND_BLASTX` on the QC reads; `assembly` runs the `ASSEMBLY_BGC` workfl
 each. `ASSEMBLY_BGC` always emits its full output map — `ROSHAB_CLI` initialises the same keys as
 `channel.empty()` when the route is off, so the `emit:`/`publish:`/`output {}` lists stay identical
 in every mode. Adding an output means touching all three lists.
+
+**`--db_dir` is a second route through the same entry workflow.** The strict parser rejects
+`-entry`, so the entry `workflow {}` branches instead: with `--db_dir` set it runs `DB_INSTALL`
+and nothing else — no `PIPELINE_INITIALISATION`, so no schema validation either (`DB_INSTALL`
+validates `--install_databases` itself). Every `publish:` target is therefore
+`install_only ? channel.empty() : ROSHAB_CLI.out.<name>`; a new output means one more ternary.
+The install processes (`INSTALL_DB`, `ANTISMASH_DOWNLOAD`, `DEEPBGC_DOWNLOAD`) write straight into
+`--db_dir` with `storeDir` — set in `conf/modules.config`, null on every other run — which is what
+makes an already-installed database be skipped. `storeDir` rejects `eval`/topic outputs, so those
+processes emit no `versions` topic. Pfam is the sharp edge: antiSMASH and DeepBGC each fetch their
+own release from `ftp.ebi.ac.uk`, which truncates concurrent downloads — hence the ordering token
+input on `DEEPBGC_DOWNLOAD`, the `error_retry` labels, and `--pfam_db` pointing into `antismash_db`
+instead of downloading a third copy.
 
 **`meta.group` is the fan-in key.** Per-sample channels are `[meta, file]`; group-level channels are
 `[group_id, files]` after `.map { meta, f -> tuple(meta.group, ...) }.groupTuple()`. Sort by

@@ -1,0 +1,28 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: antismash_download
+description: Download the antiSMASH databases
+keywords:
+  - bgc
+  - antismash
+  - database
+  - download
+tools:
+  - antismash:
+      description: |
+        Antibiotics and Secondary Metabolite Analysis Shell: rule-based detection
+        and annotation of biosynthetic gene clusters.
+      homepage: https://antismash.secondarymetabolites.org
+      documentation: https://antismash.secondarymetabolites.org
+      doi: 10.1093/nar/gkad344
+      licence: ["AGPL-3.0"]
+      identifier: ""
+output:
+  db:
+    - - "antismash_db":
+          type: directory
+          description: The antiSMASH databases, ready to be passed to `--antismash_db`
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"
