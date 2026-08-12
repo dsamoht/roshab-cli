@@ -1,0 +1,70 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/dsamoht/roshab-cli/main/assets/schema_input.json",
+    "title": "dsamoht/roshab-cli pipeline - params.input schema",
+    "description": "Schema for the file provided with params.input",
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "sample_id": {
+                "type": [
+                    "string",
+                    "integer"
+                ],
+                "pattern": "^\\S+$",
+                "errorMessage": "Sample name must be provided and cannot contain spaces",
+                "meta": [
+                    "id"
+                ]
+            },
+            "group": {
+                "type": [
+                    "string",
+                    "integer"
+                ],
+                "pattern": "^\\S+$",
+                "errorMessage": "Group name must be provided and cannot contain spaces. Samples sharing a group are summarised together and, with --coassemble_by_group, assembled together",
+                "meta": [
+                    "group"
+                ]
+            },
+            "info": {
+                "type": [
+                    "string",
+                    "integer"
+                ],
+                "pattern": "^\\S+$",
+                "errorMessage": "Sampling site (or any free-text label used in the figures) must be provided and cannot contain spaces",
+                "meta": [
+                    "info"
+                ]
+            },
+            "date": {
+                "type": [
+                    "string",
+                    "integer"
+                ],
+                "pattern": "^\\S+$",
+                "errorMessage": "Sampling date must be provided and cannot contain spaces",
+                "meta": [
+                    "date"
+                ]
+            },
+            "reads": {
+                "type": "string",
+                "format": "path",
+                "exists": true,
+                "pattern": "^\\S+$",
+                "errorMessage": "Nanopore reads must be provided: either a FastQ file (optionally gzipped) or a directory of FastQ files, which are concatenated before processing"
+            }
+        },
+        "required": [
+            "sample_id",
+            "group",
+            "info",
+            "date",
+            "reads"
+        ]
+    }
+}

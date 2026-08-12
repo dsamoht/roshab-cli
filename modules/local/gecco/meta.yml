@@ -1,0 +1,67 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: gecco
+description: Detect biosynthetic gene clusters with a conditional random field
+keywords:
+  - bgc
+  - secondary metabolites
+  - biosynthetic gene cluster
+  - gecco
+  - machine learning
+tools:
+  - gecco:
+      description: |
+        Gene Cluster prediction with Conditional random fields: fast and scalable
+        biosynthetic gene cluster detection.
+      homepage: https://gecco.embl.de
+      documentation: https://gecco.embl.de
+      doi: 10.1101/2021.05.03.442509
+      licence: ["GPL-3.0"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+    - contigs:
+        type: file
+        description: Assembled contigs in FASTA format
+        pattern: "*.{fasta,fa,fna}"
+        ontologies: []
+output:
+  clusters:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "*.gecco_clusters.tsv":
+          type: file
+          description: Predicted BGC regions in tabular format
+          pattern: "*.gecco_clusters.tsv"
+          ontologies: []
+  results:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "${prefix}_gecco":
+          type: directory
+          description: Complete GECCO output directory
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from
+      - gecco:
+          type: string
+          description: The tool name
+      - "gecco --version | sed 's/^gecco //'":
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

@@ -1,0 +1,4 @@
+sample_id,group,info,date,reads
+lake1_t1,lake1,north_shore,20260312,/path/to/reads/lake1_t1.fastq.gz
+lake1_t2,lake1,south_shore,20260312,/path/to/reads/lake1_t2.fastq.gz
+lake2_t1,lake2,dock,20260319,/path/to/reads/lake2_t1/

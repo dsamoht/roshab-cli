@@ -1,0 +1,58 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: krakentools_kreport2mpa
+description: Convert a Kraken-style report to MetaPhlAn (MPA) format
+keywords:
+  - kraken2
+  - krakentools
+  - mpa
+  - metaphlan
+  - taxonomy
+tools:
+  - krakentools:
+      description: |
+        A suite of scripts to process and analyse Kraken, KrakenUniq, Kraken2 and
+        Bracken output.
+      homepage: https://github.com/jenniferlu717/KrakenTools
+      documentation: https://github.com/jenniferlu717/KrakenTools
+      doi: 10.1038/s41596-022-00738-y
+      licence: ["GPL-3.0"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+    - report:
+        type: file
+        description: Kraken-style taxonomic report
+        pattern: "*.{kraken,report}"
+        ontologies: []
+output:
+  mpa:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "*.mpa":
+          type: file
+          description: Taxonomic profile in MPA format
+          pattern: "*.mpa"
+          ontologies: []
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from
+      - krakentools:
+          type: string
+          description: The tool name
+      - "python -c 'import importlib.metadata; print(importlib.metadata.version(\"krakentools\"))' 2>/dev/null || echo 1.2.1":
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

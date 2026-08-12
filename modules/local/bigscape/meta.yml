@@ -1,0 +1,57 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: bigscape
+description: Cluster biosynthetic gene clusters into gene cluster families
+keywords:
+  - bgc
+  - gene cluster family
+  - clustering
+  - bigscape
+  - networks
+tools:
+  - bigscape:
+      description: |
+        Biosynthetic Gene Similarity Clustering and Prospecting Engine: groups
+        biosynthetic gene clusters into gene cluster families.
+      homepage: https://github.com/medema-group/BiG-SCAPE
+      documentation: https://github.com/medema-group/BiG-SCAPE
+      doi: 10.1038/s41589-019-0400-9
+      licence: ["AGPL-3.0"]
+      identifier: ""
+input:
+  - - group_id:
+        type: string
+        description: Group identifier shared by the samples
+    - region_gbks:
+        type: file
+        description: antiSMASH region GenBank files for every sample of the group
+        pattern: "*.region*.gbk"
+        ontologies: []
+  - - pfam_db:
+        type: file
+        description: Pfam-A HMM database
+        pattern: "Pfam-A.hmm"
+        ontologies: []
+output:
+  results:
+    - - group_id:
+          type: string
+          description: Group identifier
+      - "${prefix}_bigscape":
+          type: directory
+          description: Complete BiG-SCAPE output directory
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from
+      - bigscape:
+          type: string
+          description: The tool name
+      - "bigscape --version | sed 's/^bigscape //'":
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

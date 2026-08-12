@@ -1,0 +1,68 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: pyrodigal
+description: Predict protein-coding genes on assembled contigs
+keywords:
+  - gene prediction
+  - prodigal
+  - proteins
+  - annotation
+tools:
+  - pyrodigal:
+      description: |
+        Python bindings to Prodigal, an efficient method for gene prediction in
+        prokaryotes.
+      homepage: https://github.com/althonos/pyrodigal
+      documentation: https://github.com/althonos/pyrodigal
+      doi: 10.21105/joss.04296
+      licence: ["GPL-3.0"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+    - contigs:
+        type: file
+        description: Assembled contigs in FASTA format
+        pattern: "*.{fasta,fa,fna}"
+        ontologies: []
+output:
+  faa:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "*.faa":
+          type: file
+          description: Predicted protein sequences
+          pattern: "*.faa"
+          ontologies: []
+  gff:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "*.gff":
+          type: file
+          description: Gene predictions in GFF format
+          pattern: "*.gff"
+          ontologies: []
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from
+      - pyrodigal:
+          type: string
+          description: The tool name
+      - "pyrodigal --version | sed 's/^pyrodigal v//'":
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

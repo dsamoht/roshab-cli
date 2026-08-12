@@ -1,0 +1,7 @@
+contact_links:
+  - name: Join nf-core
+    url: https://nf-co.re/join
+    about: dsamoht/roshab-cli follows the nf-core guidelines - join the nf-core community for general Nextflow and nf-core help
+  - name: roshab-cli discussions
+    url: https://github.com/dsamoht/roshab-cli/discussions
+    about: Ask a question or discuss the dsamoht/roshab-cli pipeline
