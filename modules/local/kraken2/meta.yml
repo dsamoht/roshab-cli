@@ -1,0 +1,71 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: kraken2
+description: Assign taxonomic labels to reads with Kraken2
+keywords:
+  - taxonomy
+  - classification
+  - metagenomics
+  - kraken2
+tools:
+  - kraken2:
+      description: |
+        Taxonomic sequence classifier that assigns taxonomic labels to DNA
+        sequences using exact k-mer matches.
+      homepage: https://ccb.jhu.edu/software/kraken2/
+      documentation: https://ccb.jhu.edu/software/kraken2/
+      doi: 10.1186/s13059-019-1891-0
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+    - reads:
+        type: file
+        description: Nanopore reads in FastQ format
+        pattern: "*.{fastq,fq}{,.gz}"
+        ontologies: []
+  - - db:
+        type: directory
+        description: Kraken2 database directory
+output:
+  report:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "*.kraken":
+          type: file
+          description: Kraken2 taxonomic report
+          pattern: "*.kraken"
+          ontologies: []
+  classified_reads_assignment:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "*.kraken.out":
+          type: file
+          description: Per-read Kraken2 classification
+          pattern: "*.kraken.out"
+          ontologies: []
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from
+      - kraken2:
+          type: string
+          description: The tool name
+      - "kraken2 --version | sed -n '1s/^.*Kraken version //p'":
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

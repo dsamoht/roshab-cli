@@ -1,0 +1,461 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/dsamoht/roshab-cli/main/nextflow_schema.json",
+    "title": "dsamoht/roshab-cli pipeline parameters",
+    "description": "Microbiome taxonomic classification and evaluation of cyanotoxin biosynthesis potential from nanopore reads",
+    "type": "object",
+    "$defs": {
+        "input_output_options": {
+            "title": "Input/output options",
+            "type": "object",
+            "fa_icon": "fas fa-terminal",
+            "description": "Define where the pipeline should find input data and save output data.",
+            "required": ["input", "outdir"],
+            "properties": {
+                "input": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "schema": "assets/schema_input.json",
+                    "mimetype": "text/csv",
+                    "pattern": "^\\S+\\.csv$",
+                    "description": "Path to comma-separated file containing information about the samples in the experiment.",
+                    "help_text": "You will need to create a design file with information about the samples in your experiment before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 5 columns: `sample_id`, `group`, `info`, `date` and `reads`.",
+                    "fa_icon": "fas fa-file-csv"
+                },
+                "outdir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure.",
+                    "fa_icon": "fas fa-folder-open"
+                },
+                "email": {
+                    "type": "string",
+                    "description": "Email address for completion summary.",
+                    "fa_icon": "fas fa-envelope",
+                    "help_text": "Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits. If set in your user config file (`~/.nextflow/config`) then you don't need to specify this on the command line for every run.",
+                    "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$"
+                },
+                "multiqc_title": {
+                    "type": "string",
+                    "description": "MultiQC report title. Printed as page header, used for filename if not otherwise specified.",
+                    "fa_icon": "fas fa-file-signature"
+                }
+            }
+        },
+        "reference_databases": {
+            "title": "Reference databases",
+            "type": "object",
+            "fa_icon": "fas fa-database",
+            "description": "Databases used by the taxonomic profiling and cyanotoxin screening steps.",
+            "help_text": "None of these databases are downloaded by the pipeline. Directories and `.tar.gz`/`.tgz` tarballs are both accepted for the database parameters that point at a directory: tarballs are extracted once at the start of the run.",
+            "required": ["kraken_db", "genomes_db", "genes_db"],
+            "properties": {
+                "kraken_db": {
+                    "type": "string",
+                    "format": "path",
+                    "exists": true,
+                    "description": "Path to a Kraken2 database (directory or `.tar.gz` tarball).",
+                    "help_text": "Pre-built indexes are available from https://benlangmead.github.io/aws-indexes/k2. The database must contain `ktaxonomy.tsv`, which is used to rebuild the per-sample Kraken2 reports.",
+                    "fa_icon": "fas fa-database"
+                },
+                "genomes_db": {
+                    "type": "string",
+                    "format": "path",
+                    "exists": true,
+                    "description": "Path to the genome database used by CoverM (directory of FASTA files or `.tar.gz` tarball).",
+                    "help_text": "The reference set used during development is available at https://zenodo.org/records/19522349/files/cyanobacteriota_ncbi_dRep_n220.tar.gz",
+                    "fa_icon": "fas fa-dna"
+                },
+                "genes_db": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "Path to the FASTA file of cyanotoxin-related protein sequences used by DIAMOND.",
+                    "help_text": "Available at https://zenodo.org/records/19522349/files/core_cyanotoxin-related_gene_mibig-v4_antismash-v8.faa",
+                    "fa_icon": "fas fa-file-alt"
+                },
+                "antismash_db": {
+                    "type": "string",
+                    "format": "path",
+                    "exists": true,
+                    "description": "Path to the antiSMASH databases (directory or `.tar.gz` tarball). Required with `--mode assembly` or `--mode both`.",
+                    "help_text": "Create with `download-antismash-databases` from the antiSMASH distribution.",
+                    "fa_icon": "fas fa-database"
+                },
+                "deepbgc_db": {
+                    "type": "string",
+                    "format": "path",
+                    "exists": true,
+                    "description": "Path to the DeepBGC models (directory or `.tar.gz` tarball). Required with `--run_deepbgc`.",
+                    "fa_icon": "fas fa-database"
+                },
+                "pfam_db": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "Path to `Pfam-A.hmm`. Required with `--run_bigscape`.",
+                    "fa_icon": "fas fa-file-alt"
+                }
+            }
+        },
+        "workflow_options": {
+            "title": "Workflow options",
+            "type": "object",
+            "fa_icon": "fas fa-code-branch",
+            "description": "Select which cyanotoxin screening route to run.",
+            "properties": {
+                "mode": {
+                    "type": "string",
+                    "default": "reads",
+                    "enum": ["reads", "assembly", "both"],
+                    "description": "Cyanotoxin screening route.",
+                    "help_text": "`reads` runs `diamond blastx` on the QC reads (minutes). `assembly` assembles the reads and screens the contigs for biosynthetic gene clusters (hours, high memory). `both` runs the two routes on the same reads. Taxonomic profiling runs in every mode. Shortcuts: `-profile assembly` and `-profile full`.",
+                    "fa_icon": "fas fa-code-branch"
+                },
+                "skip_qc": {
+                    "type": "boolean",
+                    "description": "Skip the read QC steps (NanoPlot and Chopper).",
+                    "fa_icon": "fas fa-forward"
+                },
+                "skip_nanoplot": {
+                    "type": "boolean",
+                    "description": "Skip the NanoPlot quality assessment but still run Chopper.",
+                    "fa_icon": "fas fa-forward"
+                }
+            }
+        },
+        "read_qc_options": {
+            "title": "Read QC options",
+            "type": "object",
+            "fa_icon": "fas fa-cut",
+            "description": "Chopper trimming and filtering thresholds.",
+            "properties": {
+                "chopper_headcrop": {
+                    "type": "integer",
+                    "default": 80,
+                    "minimum": 0,
+                    "description": "Number of bases to trim from the start of each read.",
+                    "fa_icon": "fas fa-cut"
+                },
+                "chopper_tailcrop": {
+                    "type": "integer",
+                    "default": 50,
+                    "minimum": 0,
+                    "description": "Number of bases to trim from the end of each read.",
+                    "fa_icon": "fas fa-cut"
+                },
+                "chopper_minlength": {
+                    "type": "integer",
+                    "default": 500,
+                    "minimum": 1,
+                    "description": "Minimum read length to keep after trimming.",
+                    "fa_icon": "fas fa-ruler-horizontal"
+                },
+                "chopper_minq": {
+                    "type": "integer",
+                    "default": 9,
+                    "minimum": 0,
+                    "description": "Minimum average read quality to keep.",
+                    "fa_icon": "fas fa-check-circle"
+                }
+            }
+        },
+        "taxonomic_profiling_options": {
+            "title": "Taxonomic profiling options",
+            "type": "object",
+            "fa_icon": "fas fa-sitemap",
+            "description": "Kraken2, Bracken and CoverM options.",
+            "properties": {
+                "bracken_length": {
+                    "type": "integer",
+                    "default": 300,
+                    "minimum": 1,
+                    "description": "Read length Bracken was built for, also used as the SeqKit sliding window and step size.",
+                    "help_text": "Long reads are segmented into non-overlapping windows of this length before Kraken2 classification so that the read lengths match the Bracken k-mer distribution.",
+                    "fa_icon": "fas fa-ruler-horizontal"
+                }
+            }
+        },
+        "read_screening_options": {
+            "title": "Read-level screening options",
+            "type": "object",
+            "fa_icon": "fas fa-search",
+            "description": "Options for the `--mode reads` DIAMOND screening route.",
+            "properties": {
+                "diamond_blastx_id": {
+                    "type": "integer",
+                    "default": 70,
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Minimum percentage identity of the read-level `diamond blastx` alignments.",
+                    "fa_icon": "fas fa-percent"
+                }
+            }
+        },
+        "assembly_options": {
+            "title": "Assembly options",
+            "type": "object",
+            "fa_icon": "fas fa-puzzle-piece",
+            "description": "Options for the `--mode assembly` / `--mode both` assembly steps.",
+            "properties": {
+                "assembler": {
+                    "type": "string",
+                    "default": "flye",
+                    "enum": ["flye", "metamdbg"],
+                    "description": "Assembler used for the contig-level route. Shortcut: `-profile metamdbg`.",
+                    "fa_icon": "fas fa-puzzle-piece"
+                },
+                "assembly_cpus": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "CPUs given to the assembly and antiSMASH steps. Overrides the `process_high` default.",
+                    "help_text": "Memory and time still come from the `process_high` label, so set them in a custom config (`-c my.config`) when running on a scheduler.",
+                    "fa_icon": "fas fa-microchip"
+                },
+                "coassemble_by_group": {
+                    "type": "boolean",
+                    "description": "Co-assemble all the samples of a group instead of producing one assembly per sample.",
+                    "fa_icon": "fas fa-object-group"
+                },
+                "flye_args": {
+                    "type": "string",
+                    "description": "Extra arguments passed to `flye`.",
+                    "fa_icon": "fas fa-terminal"
+                },
+                "metamdbg_args": {
+                    "type": "string",
+                    "description": "Extra arguments passed to `metaMDBG`.",
+                    "fa_icon": "fas fa-terminal"
+                },
+                "polish": {
+                    "type": "boolean",
+                    "description": "Polish the assembly with Medaka. Off by default, and only available with `--assembler flye`; `metamdbg` polishes internally and is never passed to Medaka.",
+                    "fa_icon": "fas fa-gem"
+                },
+                "medaka_model": {
+                    "type": "string",
+                    "description": "Medaka model to use. Defaults to letting Medaka choose.",
+                    "fa_icon": "fas fa-brain"
+                },
+                "min_contig_length": {
+                    "type": "integer",
+                    "default": 1000,
+                    "minimum": 1,
+                    "description": "Minimum contig length kept for screening, also passed to antiSMASH as `--minlength`.",
+                    "fa_icon": "fas fa-ruler-horizontal"
+                }
+            }
+        },
+        "bgc_screening_options": {
+            "title": "BGC screening options",
+            "type": "object",
+            "fa_icon": "fas fa-dna",
+            "description": "Options for the biosynthetic gene cluster detection steps.",
+            "properties": {
+                "antismash_genefinding": {
+                    "type": "string",
+                    "default": "prodigal-m",
+                    "enum": ["glimmerhmm", "prodigal", "prodigal-m", "none", "error"],
+                    "description": "antiSMASH `--genefinding-tool`.",
+                    "fa_icon": "fas fa-search"
+                },
+                "diamond_blastp_id": {
+                    "type": "integer",
+                    "default": 70,
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Minimum percentage identity of the contig-level `diamond blastp` alignments.",
+                    "fa_icon": "fas fa-percent"
+                },
+                "bgc_min_overlap": {
+                    "type": "integer",
+                    "default": 500,
+                    "minimum": 0,
+                    "description": "Overlap (bp) at which two tools are considered to call the same BGC region.",
+                    "help_text": "Regions supported by at least two tools after merging are labelled `high` confidence in the per-sample `*.bgc.tsv` table.",
+                    "fa_icon": "fas fa-arrows-alt-h"
+                },
+                "run_deepbgc": {
+                    "type": "boolean",
+                    "description": "Add DeepBGC to the antiSMASH + GECCO screening. Requires `--deepbgc_db`.",
+                    "fa_icon": "fas fa-brain"
+                },
+                "run_bigscape": {
+                    "type": "boolean",
+                    "description": "Cluster the antiSMASH regions into gene cluster families per group. Requires `--pfam_db`.",
+                    "fa_icon": "fas fa-project-diagram"
+                }
+            }
+        },
+        "institutional_config_options": {
+            "title": "Institutional config options",
+            "type": "object",
+            "fa_icon": "fas fa-university",
+            "description": "Parameters used to describe centralised config profiles. These should not be edited.",
+            "help_text": "The centralised nf-core configuration profiles use a handful of pipeline parameters to describe themselves. This information is then printed to the Nextflow log when you run a pipeline. You should not need to change these values when you run a pipeline.",
+            "properties": {
+                "custom_config_version": {
+                    "type": "string",
+                    "description": "Git commit id for Institutional configs.",
+                    "default": "master",
+                    "hidden": true,
+                    "fa_icon": "fas fa-users-cog"
+                },
+                "custom_config_base": {
+                    "type": "string",
+                    "description": "Base directory for Institutional configs.",
+                    "default": "https://raw.githubusercontent.com/nf-core/configs/master",
+                    "hidden": true,
+                    "help_text": "If you're running offline, Nextflow will not be able to fetch the institutional config files from the internet. If you don't need them, then this is not a problem. If you do need them, you should download the files from the repo and tell Nextflow where to find them with this parameter.",
+                    "fa_icon": "fas fa-users-cog"
+                },
+                "config_profile_name": {
+                    "type": "string",
+                    "description": "Institutional config name.",
+                    "hidden": true,
+                    "fa_icon": "fas fa-users-cog"
+                },
+                "config_profile_description": {
+                    "type": "string",
+                    "description": "Institutional config description.",
+                    "hidden": true,
+                    "fa_icon": "fas fa-users-cog"
+                },
+                "config_profile_contact": {
+                    "type": "string",
+                    "description": "Institutional config contact information.",
+                    "hidden": true,
+                    "fa_icon": "fas fa-users-cog"
+                },
+                "config_profile_url": {
+                    "type": "string",
+                    "description": "Institutional config URL link.",
+                    "hidden": true,
+                    "fa_icon": "fas fa-users-cog"
+                }
+            }
+        },
+        "generic_options": {
+            "title": "Generic options",
+            "type": "object",
+            "fa_icon": "fas fa-file-import",
+            "description": "Less common options for the pipeline, typically set in a config file.",
+            "help_text": "These options are common to all nf-core pipelines and allow you to customise some of the core preferences for pipeline execution.",
+            "properties": {
+                "version": {
+                    "type": "boolean",
+                    "description": "Display version and exit.",
+                    "fa_icon": "fas fa-question-circle",
+                    "hidden": true
+                },
+                "publish_dir_mode": {
+                    "type": "string",
+                    "default": "copy",
+                    "description": "Method used to save pipeline results to output directory.",
+                    "help_text": "The Nextflow `publishDir` option specifies which intermediate files should be saved to the output directory. This option tells the pipeline what method should be used to move these files. See [Nextflow docs](https://www.nextflow.io/docs/latest/process.html#publishdir) for details.",
+                    "fa_icon": "fas fa-copy",
+                    "enum": ["symlink", "rellink", "link", "copy", "copyNoFollow", "move"],
+                    "hidden": true
+                },
+                "email_on_fail": {
+                    "type": "string",
+                    "description": "Email address for completion summary, only when pipeline fails.",
+                    "fa_icon": "fas fa-exclamation-triangle",
+                    "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$",
+                    "help_text": "An email address to send a summary email to when the pipeline is completed - ONLY sent if the pipeline does not exit successfully.",
+                    "hidden": true
+                },
+                "plaintext_email": {
+                    "type": "boolean",
+                    "description": "Send plain-text email instead of HTML.",
+                    "fa_icon": "fas fa-remove-format",
+                    "hidden": true
+                },
+                "max_multiqc_email_size": {
+                    "type": "string",
+                    "description": "File size limit when attaching MultiQC reports to summary emails.",
+                    "pattern": "^\\d+(\\.\\d+)?\\.?\\s*(K|M|G|T)?B$",
+                    "default": "25.MB",
+                    "fa_icon": "fas fa-file-upload",
+                    "hidden": true
+                },
+                "monochrome_logs": {
+                    "type": "boolean",
+                    "description": "Do not use coloured log outputs.",
+                    "fa_icon": "fas fa-palette",
+                    "hidden": true
+                },
+                "multiqc_config": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Custom config file to supply to MultiQC.",
+                    "fa_icon": "fas fa-cog",
+                    "hidden": true
+                },
+                "multiqc_logo": {
+                    "type": "string",
+                    "description": "Custom logo file to supply to MultiQC. File name must also be set in the MultiQC config file.",
+                    "fa_icon": "fas fa-image",
+                    "hidden": true
+                },
+                "multiqc_methods_description": {
+                    "type": "string",
+                    "description": "Custom MultiQC yaml file containing HTML including a methods description.",
+                    "fa_icon": "fas fa-cog",
+                    "hidden": true
+                },
+                "validate_params": {
+                    "type": "boolean",
+                    "description": "Boolean whether to validate parameters against the schema at runtime.",
+                    "default": true,
+                    "fa_icon": "fas fa-check-square",
+                    "hidden": true
+                },
+                "pipelines_testdata_base_path": {
+                    "type": "string",
+                    "fa_icon": "far fa-check-circle",
+                    "description": "Base URL or local path to location of pipeline test dataset files.",
+                    "default": "https://raw.githubusercontent.com/dsamoht/roshab-cli/main/tests/data/",
+                    "hidden": true
+                },
+                "trace_report_suffix": {
+                    "type": "string",
+                    "fa_icon": "far calendar",
+                    "description": "Suffix to add to the trace report filename. Default is the date and time in the format yyyy-MM-dd_HH-mm-ss.",
+                    "hidden": true
+                },
+                "help": {
+                    "type": "boolean",
+                    "description": "Display help text.",
+                    "fa_icon": "fas fa-question-circle",
+                    "hidden": true
+                },
+                "help_full": {
+                    "type": "boolean",
+                    "description": "Display the full help text, including hidden parameters.",
+                    "fa_icon": "fas fa-question-circle",
+                    "hidden": true
+                },
+                "show_hidden": {
+                    "type": "boolean",
+                    "description": "Show all params when using `--help`.",
+                    "fa_icon": "fas fa-question-circle",
+                    "hidden": true
+                }
+            }
+        }
+    },
+    "allOf": [
+        { "$ref": "#/$defs/input_output_options" },
+        { "$ref": "#/$defs/reference_databases" },
+        { "$ref": "#/$defs/workflow_options" },
+        { "$ref": "#/$defs/read_qc_options" },
+        { "$ref": "#/$defs/taxonomic_profiling_options" },
+        { "$ref": "#/$defs/read_screening_options" },
+        { "$ref": "#/$defs/assembly_options" },
+        { "$ref": "#/$defs/bgc_screening_options" },
+        { "$ref": "#/$defs/institutional_config_options" },
+        { "$ref": "#/$defs/generic_options" }
+    ]
+}

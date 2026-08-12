@@ -1,0 +1,57 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: seqkit_sliding
+description: Segment long reads into fixed-length windows
+keywords:
+  - seqkit
+  - fastq
+  - sliding window
+  - nanopore
+  - long reads
+tools:
+  - seqkit:
+      description: |
+        A cross-platform and ultrafast toolkit for FASTA/Q file manipulation.
+      homepage: https://bioinf.shenwei.me/seqkit/
+      documentation: https://bioinf.shenwei.me/seqkit/
+      doi: 10.1371/journal.pone.0163962
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+    - fastq:
+        type: file
+        description: Reads in FastQ format
+        pattern: "*.{fastq,fq}{,.gz}"
+        ontologies: []
+output:
+  fastq:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "*.fastq":
+          type: file
+          description: Reads split into fixed-length windows
+          pattern: "*.fastq"
+          ontologies: []
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from
+      - seqkit:
+          type: string
+          description: The tool name
+      - "seqkit version | sed 's/^seqkit v//'":
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

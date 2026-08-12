@@ -1,0 +1,61 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: plot_bgc
+description: Plot and summarise the merged BGC calls of a group
+keywords:
+  - visualisation
+  - bgc
+  - summary
+  - figure
+tools:
+  - python:
+      description: |
+        Python is a programming language that lets you work quickly and integrate
+        systems more effectively.
+      homepage: https://www.python.org
+      documentation: https://www.python.org
+      licence: ["PSF-2.0"]
+      identifier: ""
+input:
+  - - group_id:
+        type: string
+        description: Group identifier
+    - bgc_tsvs:
+        type: file
+        description: Merged BGC tables for every sample of the group
+        pattern: "*.bgc.tsv"
+        ontologies: []
+output:
+  pdf:
+    - - group_id:
+          type: string
+          description: Group identifier
+      - "*_bgc_overview.pdf":
+          type: file
+          description: BGC overview figure
+          pattern: "*_bgc_overview.pdf"
+          ontologies: []
+  tsv:
+    - - group_id:
+          type: string
+          description: Group identifier
+      - "*_bgc_summary.tsv":
+          type: file
+          description: Per-group BGC summary table
+          pattern: "*_bgc_summary.tsv"
+          ontologies: []
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from
+      - python:
+          type: string
+          description: The tool name
+      - "python --version | sed 's/^Python //'":
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

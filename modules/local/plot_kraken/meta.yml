@@ -1,0 +1,58 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: plot_kraken
+description: Plot the cyanobacterial fraction of the Kraken2/Bracken profiles of a group
+keywords:
+  - visualisation
+  - taxonomy
+  - kraken2
+  - bracken
+  - figure
+tools:
+  - python:
+      description: |
+        Python is a programming language that lets you work quickly and integrate
+        systems more effectively.
+      homepage: https://www.python.org
+      documentation: https://www.python.org
+      licence: ["PSF-2.0"]
+      identifier: ""
+input:
+  - - group_id:
+        type: string
+        description: Group identifier
+    - combined_mpa:
+        type: file
+        description: Combined MPA profile for the group
+        pattern: "*.combined.mpa"
+        ontologies: []
+  - - samplesheet:
+        type: file
+        description: The pipeline samplesheet, used for the sampling date and site labels
+        pattern: "*.csv"
+        ontologies: []
+output:
+  pdf:
+    - - group_id:
+          type: string
+          description: Group identifier
+      - "*.pdf":
+          type: file
+          description: Taxonomic barplots
+          pattern: "*.pdf"
+          ontologies: []
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from
+      - python:
+          type: string
+          description: The tool name
+      - "python --version | sed 's/^Python //'":
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

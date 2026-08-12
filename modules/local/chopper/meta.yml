@@ -1,0 +1,58 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: chopper
+description: Trim and quality-filter Oxford Nanopore long reads
+keywords:
+  - nanopore
+  - long reads
+  - trimming
+  - quality control
+  - filtering
+tools:
+  - chopper:
+      description: |
+        Rust implementation of NanoFilt and NanoLyse for filtering and trimming of
+        long read sequencing data.
+      homepage: https://github.com/wdecoster/chopper
+      documentation: https://github.com/wdecoster/chopper
+      doi: 10.1093/bioinformatics/btad311
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+    - reads:
+        type: file
+        description: Nanopore reads in FastQ format
+        pattern: "*.{fastq,fq}{,.gz}"
+        ontologies: []
+output:
+  fastq:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "*.fastq.gz":
+          type: file
+          description: Trimmed and filtered reads
+          pattern: "*.fastq.gz"
+          ontologies: []
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from
+      - chopper:
+          type: string
+          description: The tool name
+      - "chopper --version | sed 's/^chopper //'":
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

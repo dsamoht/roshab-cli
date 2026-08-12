@@ -1,0 +1,45 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: split_kraken_output
+description: Split a combined Kraken2 read assignment file back into one file per sample
+keywords:
+  - kraken2
+  - split
+  - demultiplex
+  - metagenomics
+tools:
+  - gnu-coreutils:
+      description: |
+        GNU core utilities, the basic file, shell and text manipulation utilities.
+      homepage: https://www.gnu.org/software/coreutils/
+      documentation: https://www.gnu.org/software/coreutils/
+      licence: ["GPL-3.0"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map describing the combined Kraken2 run, whose `samples` entry
+          lists the sample names stamped onto the read IDs
+          e.g. `[ id:'all', samples:['sample1', 'sample2'] ]`
+    - kraken_output:
+        type: file
+        description: Kraken2 per-read classification of all samples combined
+        pattern: "*.kraken.out"
+        ontologies: []
+output:
+  split:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "*.kraken.out":
+          type: file
+          description: One Kraken2 classification file per sample, named after the sample
+          pattern: "*.kraken.out"
+          ontologies: []
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"
