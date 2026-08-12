@@ -14,6 +14,7 @@
 */
 
 include { ASSEMBLY_BGC                                 } from './workflows/assembly_bgc'
+include { DB_INSTALL                                   } from './workflows/db_install'
 include { LONGREAD_QC                                  } from './workflows/longread_qc'
 
 include { BRACKEN                                      } from './modules/local/bracken'
@@ -297,67 +298,83 @@ workflow {
 
     main:
 
-    //
-    // SUBWORKFLOW: Run initialisation tasks
-    //
-    PIPELINE_INITIALISATION(
-        params.version,
-        params.validate_params,
-        params.monochrome_logs,
-        args,
-        params.outdir,
-        params.input,
-        params.help,
-        params.help_full,
-        params.show_hidden,
-    )
+    // `--db_dir` switches the run to database installation: the databases are
+    // downloaded into that directory and nothing else runs. `-entry` is not an
+    // option here - the strict parser only ever runs the entry workflow below.
+    def install_only = params.db_dir != null
 
-    //
-    // WORKFLOW: Run the main analysis
-    //
-    ROSHAB_CLI(PIPELINE_INITIALISATION.out.samplesheet)
+    if (install_only) {
+        //
+        // WORKFLOW: Download the reference databases and stop
+        //
+        DB_INSTALL()
+    }
+    else {
+        //
+        // SUBWORKFLOW: Run initialisation tasks
+        //
+        PIPELINE_INITIALISATION(
+            params.version,
+            params.validate_params,
+            params.monochrome_logs,
+            args,
+            params.outdir,
+            params.input,
+            params.help,
+            params.help_full,
+            params.show_hidden,
+        )
 
-    //
-    // SUBWORKFLOW: Run completion tasks
-    //
-    PIPELINE_COMPLETION(
-        params.email,
-        params.email_on_fail,
-        params.plaintext_email,
-        params.outdir,
-        params.monochrome_logs,
-        ROSHAB_CLI.out.multiqc_report,
-    )
+        //
+        // WORKFLOW: Run the main analysis
+        //
+        ROSHAB_CLI(PIPELINE_INITIALISATION.out.samplesheet)
+
+        //
+        // SUBWORKFLOW: Run completion tasks
+        //
+        PIPELINE_COMPLETION(
+            params.email,
+            params.email_on_fail,
+            params.plaintext_email,
+            params.outdir,
+            params.monochrome_logs,
+            ROSHAB_CLI.out.multiqc_report,
+        )
+    }
 
     publish:
-    qc_reads          = ROSHAB_CLI.out.qc_reads
-    nanoplot_raw_html = ROSHAB_CLI.out.nanoplot_raw_html
-    nanoplot_qc_html  = ROSHAB_CLI.out.nanoplot_qc_html
-    kraken_stdout     = ROSHAB_CLI.out.kraken_stdout
-    kraken_report     = ROSHAB_CLI.out.kraken_report
-    bracken_report    = ROSHAB_CLI.out.bracken_report
-    bracken_tsv       = ROSHAB_CLI.out.bracken_tsv
-    bracken_mpa       = ROSHAB_CLI.out.bracken_mpa
-    combined_mpa      = ROSHAB_CLI.out.combined_mpa
-    kraken_doc        = ROSHAB_CLI.out.kraken_doc
-    diamond_tsv       = ROSHAB_CLI.out.diamond_tsv
-    diamond_plot      = ROSHAB_CLI.out.diamond_plot
-    coverm_genome_out = ROSHAB_CLI.out.coverm_genome_out
-    coverm_plot_out   = ROSHAB_CLI.out.coverm_plot_out
-    contigs           = ROSHAB_CLI.out.contigs
-    assembly_stats    = ROSHAB_CLI.out.assembly_stats
-    proteins          = ROSHAB_CLI.out.proteins
-    blastp_tsv        = ROSHAB_CLI.out.blastp_tsv
-    blastp_plot       = ROSHAB_CLI.out.blastp_plot
-    antismash_results = ROSHAB_CLI.out.antismash_results
-    gecco_results     = ROSHAB_CLI.out.gecco_results
-    deepbgc_tsv       = ROSHAB_CLI.out.deepbgc_tsv
-    bgc_tsv           = ROSHAB_CLI.out.bgc_tsv
-    bgc_plot          = ROSHAB_CLI.out.bgc_plot
-    bgc_summary       = ROSHAB_CLI.out.bgc_summary
-    bigscape_results  = ROSHAB_CLI.out.bigscape_results
-    multiqc_html      = ROSHAB_CLI.out.multiqc_html
-    multiqc_data      = ROSHAB_CLI.out.multiqc_data
+    // `publish:` is evaluated whichever branch ran, so every target falls back to
+    // an empty channel on a database installation run, where `ROSHAB_CLI` was
+    // never invoked and has no outputs to publish.
+    qc_reads          = install_only ? channel.empty() : ROSHAB_CLI.out.qc_reads
+    nanoplot_raw_html = install_only ? channel.empty() : ROSHAB_CLI.out.nanoplot_raw_html
+    nanoplot_qc_html  = install_only ? channel.empty() : ROSHAB_CLI.out.nanoplot_qc_html
+    kraken_stdout     = install_only ? channel.empty() : ROSHAB_CLI.out.kraken_stdout
+    kraken_report     = install_only ? channel.empty() : ROSHAB_CLI.out.kraken_report
+    bracken_report    = install_only ? channel.empty() : ROSHAB_CLI.out.bracken_report
+    bracken_tsv       = install_only ? channel.empty() : ROSHAB_CLI.out.bracken_tsv
+    bracken_mpa       = install_only ? channel.empty() : ROSHAB_CLI.out.bracken_mpa
+    combined_mpa      = install_only ? channel.empty() : ROSHAB_CLI.out.combined_mpa
+    kraken_doc        = install_only ? channel.empty() : ROSHAB_CLI.out.kraken_doc
+    diamond_tsv       = install_only ? channel.empty() : ROSHAB_CLI.out.diamond_tsv
+    diamond_plot      = install_only ? channel.empty() : ROSHAB_CLI.out.diamond_plot
+    coverm_genome_out = install_only ? channel.empty() : ROSHAB_CLI.out.coverm_genome_out
+    coverm_plot_out   = install_only ? channel.empty() : ROSHAB_CLI.out.coverm_plot_out
+    contigs           = install_only ? channel.empty() : ROSHAB_CLI.out.contigs
+    assembly_stats    = install_only ? channel.empty() : ROSHAB_CLI.out.assembly_stats
+    proteins          = install_only ? channel.empty() : ROSHAB_CLI.out.proteins
+    blastp_tsv        = install_only ? channel.empty() : ROSHAB_CLI.out.blastp_tsv
+    blastp_plot       = install_only ? channel.empty() : ROSHAB_CLI.out.blastp_plot
+    antismash_results = install_only ? channel.empty() : ROSHAB_CLI.out.antismash_results
+    gecco_results     = install_only ? channel.empty() : ROSHAB_CLI.out.gecco_results
+    deepbgc_tsv       = install_only ? channel.empty() : ROSHAB_CLI.out.deepbgc_tsv
+    bgc_tsv           = install_only ? channel.empty() : ROSHAB_CLI.out.bgc_tsv
+    bgc_plot          = install_only ? channel.empty() : ROSHAB_CLI.out.bgc_plot
+    bgc_summary       = install_only ? channel.empty() : ROSHAB_CLI.out.bgc_summary
+    bigscape_results  = install_only ? channel.empty() : ROSHAB_CLI.out.bigscape_results
+    multiqc_html      = install_only ? channel.empty() : ROSHAB_CLI.out.multiqc_html
+    multiqc_data      = install_only ? channel.empty() : ROSHAB_CLI.out.multiqc_data
 }
 
 /*

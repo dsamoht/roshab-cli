@@ -1,0 +1,34 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: deepbgc_download
+description: Download the DeepBGC models
+keywords:
+  - bgc
+  - deepbgc
+  - database
+  - download
+tools:
+  - deepbgc:
+      description: |
+        Deep learning genome mining strategy for biosynthetic gene cluster
+        prediction.
+      homepage: https://github.com/Merck/deepbgc
+      documentation: https://github.com/Merck/deepbgc
+      doi: 10.1093/nar/gkz654
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - ready:
+        type: string
+        description: |
+          Ordering token, not used by the script: DeepBGC and antiSMASH fetch a
+          Pfam release from the same server, so DeepBGC waits for antiSMASH
+output:
+  db:
+    - - "deepbgc_db":
+          type: directory
+          description: The DeepBGC models, ready to be passed to `--deepbgc_db`
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

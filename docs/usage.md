@@ -24,38 +24,105 @@ lake1_t2,lake1,south_shore,20260312,/data/lake1_t2.fastq.gz
 lake2_t1,lake2,dock,20260319,/data/lake2_t1/
 ```
 
-| Column      | Description                                                                                                                                                                       |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sample_id` | Sample name. Must not contain spaces. Becomes `meta.id` and is stamped onto the read IDs so that the combined Kraken2 run can be split back out per sample.                          |
-| `group`     | Group the sample belongs to. Results are published under `group_<group>/` and per-group figures combine every sample of the group. `--coassemble_by_group` assembles them together.  |
-| `info`      | Free-text label for the sampling site. Used in the axis labels of the taxonomy and coverage figures.                                                                                 |
-| `date`      | Sampling date. Used in the figures to order samples over time.                                                                                                                       |
-| `reads`     | Nanopore reads: a FastQ file (optionally gzipped) or a directory of FastQ files, which are concatenated before processing.                                                            |
+| Column      | Description                                                                                                                                                                         |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sample_id` | Sample name. Must not contain spaces. Becomes `meta.id` and is stamped onto the read IDs so that the combined Kraken2 run can be split back out per sample.                         |
+| `group`     | Group the sample belongs to. Results are published under `group_<group>/` and per-group figures combine every sample of the group. `--coassemble_by_group` assembles them together. |
+| `info`      | Free-text label for the sampling site. Used in the axis labels of the taxonomy and coverage figures.                                                                                |
+| `date`      | Sampling date. Used in the figures to order samples over time.                                                                                                                      |
+| `reads`     | Nanopore reads: a FastQ file (optionally gzipped) or a directory of FastQ files, which are concatenated before processing.                                                          |
 
 An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
 
 ## Reference databases
 
-None of the databases are downloaded by the pipeline. Where a database is a
-directory, a `.tar.gz` or `.tgz` tarball is also accepted and is extracted once
+An analysis run never downloads a database: point it at databases you already
+have, or install them once with `--db_dir` (see
+[Installing the databases](#installing-the-databases) below). Where a database is
+a directory, a `.tar.gz` or `.tgz` tarball is also accepted and is extracted once
 at the start of the run.
 
-| Parameter        | Required                                  | Where to get it                                                                                                                     |
-| ---------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `--kraken_db`    | always                                    | Pre-built indexes at [benlangmead.github.io/aws-indexes/k2](https://benlangmead.github.io/aws-indexes/k2). Must contain `ktaxonomy.tsv`. |
-| `--genomes_db`   | always                                    | [cyanobacteriota_ncbi_dRep_n220.tar.gz](https://zenodo.org/records/19522349/files/cyanobacteriota_ncbi_dRep_n220.tar.gz)               |
-| `--genes_db`     | always                                    | [core_cyanotoxin-related_gene_mibig-v4_antismash-v8.faa](https://zenodo.org/records/19522349/files/core_cyanotoxin-related_gene_mibig-v4_antismash-v8.faa) |
-| `--antismash_db` | with `--mode assembly` / `--mode both`    | Build with `download-antismash-databases` from the antiSMASH distribution.                                                            |
-| `--deepbgc_db`   | with `--run_deepbgc`                      | Build with `deepbgc download`.                                                                                                        |
-| `--pfam_db`      | with `--run_bigscape`                     | `Pfam-A.hmm` from [InterPro](https://www.ebi.ac.uk/interpro/download/Pfam/).                                                            |
+| Parameter        | Required                               | Where to get it                                                                                                                                            |
+| ---------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--kraken_db`    | always                                 | Pre-built indexes at [benlangmead.github.io/aws-indexes/k2](https://benlangmead.github.io/aws-indexes/k2). Must contain `ktaxonomy.tsv`.                   |
+| `--genomes_db`   | always                                 | [cyanobacteriota_ncbi_dRep_n220.tar.gz](https://zenodo.org/records/19522349/files/cyanobacteriota_ncbi_dRep_n220.tar.gz)                                   |
+| `--genes_db`     | always                                 | [core_cyanotoxin-related_gene_mibig-v4_antismash-v8.faa](https://zenodo.org/records/19522349/files/core_cyanotoxin-related_gene_mibig-v4_antismash-v8.faa) |
+| `--antismash_db` | with `--mode assembly` / `--mode both` | Build with `download-antismash-databases` from the antiSMASH distribution.                                                                                 |
+| `--deepbgc_db`   | with `--run_deepbgc`                   | Build with `deepbgc download`.                                                                                                                             |
+| `--pfam_db`      | with `--run_bigscape`                  | `Pfam-A.hmm` from [InterPro](https://www.ebi.ac.uk/interpro/download/Pfam/).                                                                               |
+
+## Installing the databases
+
+`--db_dir` switches the run to database installation: the databases are
+downloaded into that directory and no analysis step runs. `--input` and
+`--outdir` are not needed.
+
+```bash
+nextflow run dsamoht/roshab-cli \
+   -profile <docker/singularity/.../institute> \
+   --db_dir /the/path
+```
+
+Each database is installed into a directory of its own, and the run finishes by
+printing the parameters to use:
+
+```text
+/the/path/kraken_db/
+/the/path/genomes_db/
+/the/path/genes_db/core_cyanotoxin-related_gene_mibig-v4_antismash-v8.faa
+/the/path/antismash_db/
+/the/path/deepbgc_db/
+/the/path/antismash_db/pfam/35.0/Pfam-A.hmm    # BiG-SCAPE reuses the antiSMASH copy
+```
+
+Installing everything downloads tens of gigabytes, and each database is unpacked
+in the work directory before being moved into `--db_dir`, so the work
+filesystem needs room for the archive and its contents at the same time. The
+Kraken2 index is the one to plan for: the default `k2_pluspf_16_GB` is a 12 GB
+download that unpacks to ~16 GB, so ~28 GB free. `k2_pluspf_08_GB` halves that.
+`--install_databases` picks a subset:
+
+```bash
+# only what the default `--mode reads` route needs
+nextflow run dsamoht/roshab-cli \
+   -profile <docker/singularity/.../institute> \
+   --db_dir /the/path \
+   --install_databases kraken,genomes,genes
+```
+
+| Name        | Installed as    | How it is obtained                                                      |
+| ----------- | --------------- | ----------------------------------------------------------------------- |
+| `kraken`    | `kraken_db/`    | download of `--kraken_db_url`, by default the 16 GB capped PlusPF index |
+| `genomes`   | `genomes_db/`   | download of `--genomes_db_url`                                          |
+| `genes`     | `genes_db/`     | download of `--genes_db_url`                                            |
+| `antismash` | `antismash_db/` | `download-antismash-databases`                                          |
+| `deepbgc`   | `deepbgc_db/`   | `deepbgc download`                                                      |
+| `pfam`      | `pfam_db/`      | download of `--pfam_db_url`, skipped when `antismash` is installed too  |
+
+A database that is already present in `--db_dir` is left alone, so an
+interrupted install can simply be run again; delete its directory to force a
+fresh download.
+
+Pfam is the one database several tools want at once: antiSMASH and DeepBGC each
+download a release of their own (35.0 and 31.0) from `ftp.ebi.ac.uk`, which
+drops large downloads when several run against it at the same time. So DeepBGC
+waits for antiSMASH instead of running alongside it, and installing `pfam`
+together with `antismash` reuses the antiSMASH copy — already `hmmpress`-ed,
+which is what BiG-SCAPE wants — rather than fetching a third one. A download that
+fails anyway is retried twice, from the start.
+
+Any other Kraken2 index from
+[benlangmead.github.io/aws-indexes/k2](https://benlangmead.github.io/aws-indexes/k2)
+can be installed by passing its URL to `--kraken_db_url` — the pipeline needs an
+index that contains `ktaxonomy.tsv`.
 
 ## Cyanotoxin screening routes
 
-| `--mode`          | What it does                                                            | Cost               |
-| ----------------- | ----------------------------------------------------------------------- | ------------------ |
-| `reads` (default) | `diamond blastx` of the QC reads against the cyanotoxin gene database    | minutes            |
-| `assembly`        | assembly, then BGC screening of the contigs                             | hours, high memory |
-| `both`            | both routes on the same reads                                           |                    |
+| `--mode`          | What it does                                                          | Cost               |
+| ----------------- | --------------------------------------------------------------------- | ------------------ |
+| `reads` (default) | `diamond blastx` of the QC reads against the cyanotoxin gene database | minutes            |
+| `assembly`        | assembly, then BGC screening of the contigs                           | hours, high memory |
+| `both`            | both routes on the same reads                                         |                    |
 
 `-profile assembly` and `-profile full` are shortcuts for `--mode assembly` and
 `--mode both`. `-profile metamdbg` is a shortcut for `--assembler metamdbg`.
@@ -206,6 +273,29 @@ process {
 ```
 
 To learn how to provide additional arguments to a particular tool of the pipeline, please see the [customising tool arguments](https://nf-co.re/docs/usage/configuration#customising-tool-arguments) section of the nf-core website.
+
+### Running on a laptop
+
+The `process_high` steps ask for 12 CPUs and 72 GB, which the local executor
+refuses to start on a machine that does not have them. Add `-profile laptop` to
+cap every request at 8 CPUs and 14 GB:
+
+```bash
+nextflow run dsamoht/roshab-cli -profile docker,laptop --input samplesheet.csv --outdir results ...
+```
+
+Under Docker Desktop the cap is only honoured if the VM itself has that much
+memory (Settings > Resources > Memory) - the pipeline requests 14 GB, the VM has
+to be able to hand it over.
+
+The Kraken2 index is the memory ceiling of a run: it is loaded into RAM whole, so
+`k2_pluspf_16_GB` (the `--kraken_db_url` default) needs ~16 GB on its own. On a
+16 GB machine install the 8 GB build instead, once:
+
+```bash
+nextflow run dsamoht/roshab-cli -profile docker --db_dir <PATH> --install_databases kraken \
+    --kraken_db_url https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_08_GB_20260626.tar.gz
+```
 
 ### Custom Containers
 

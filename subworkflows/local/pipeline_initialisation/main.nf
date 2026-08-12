@@ -68,6 +68,12 @@ workflow PIPELINE_INITIALISATION {
 
     def command = "nextflow run ${workflow.manifest.name} -profile <docker/singularity/.../institute> --input samplesheet.csv --outdir <OUTDIR> --kraken_db <PATH> --genomes_db <PATH> --genes_db <PATH>"
 
+    // The last argument is `cli_typecast`: `null` leaves it to nf-schema, which
+    // casts command line values to the type in the schema whenever the strict
+    // syntax parser is in use - the default since Nextflow 25.10. The template
+    // hardcodes `false` here, which is only right for the old parser, where
+    // Nextflow itself did the casting: with it, a boolean flag such as
+    // `--skip_qc` reaches validation as the string "true" and the run aborts
     UTILS_NFSCHEMA_PLUGIN (
         workflow,
         validate_params,
@@ -78,7 +84,7 @@ workflow PIPELINE_INITIALISATION {
         before_text,
         after_text,
         command,
-        false
+        null
     )
 
     //
