@@ -1,0 +1,65 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+name: "pipeline_initialisation"
+description: Validate the pipeline parameters and read the sample sheet
+keywords:
+  - initialisation
+  - validation
+  - samplesheet
+components:
+  - utils_nextflow_pipeline
+  - utils_nfcore_pipeline
+  - utils_nfschema_plugin
+input:
+  - version:
+      type: boolean
+      description: |
+        Print the pipeline version and exit.
+  - validate_params:
+      type: boolean
+      description: |
+        Validate the parameters against nextflow_schema.json before starting.
+  - monochrome_logs:
+      type: boolean
+      description: |
+        Disable ANSI colour codes in the log output.
+  - nextflow_cli_args:
+      type: list
+      description: |
+        Positional arguments passed on the Nextflow command line.
+  - outdir:
+      type: string
+      description: |
+        Directory every result is published to. Required.
+  - input:
+      type: file
+      description: |
+        Path to the comma-separated sample sheet.
+      pattern: "*.csv"
+  - help:
+      type: boolean
+      description: |
+        Print the help message and exit.
+  - help_full:
+      type: boolean
+      description: |
+        Print the full help message and exit.
+  - show_hidden:
+      type: boolean
+      description: |
+        Include hidden parameters in the help message.
+output:
+  - samplesheet:
+      type: map
+      description: |
+        Channel of validated sample rows, `[ meta, reads ]`, with `meta` carrying
+        `id` and `group`.
+  - versions:
+      type: file
+      description: |
+        Channel of `versions.yml` files.
+      pattern: "versions.yml"
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

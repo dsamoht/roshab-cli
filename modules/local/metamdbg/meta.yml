@@ -1,0 +1,69 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: metamdbg
+description: Assemble Oxford Nanopore reads into contigs with metaMDBG
+keywords:
+  - assembly
+  - metagenome
+  - nanopore
+  - long reads
+  - metamdbg
+tools:
+  - metamdbg:
+      description: |
+        Memory-efficient metagenome assembler for long and accurate reads, based
+        on a minimizer de Bruijn graph.
+      homepage: https://github.com/GaetanBenoitDev/metaMDBG
+      documentation: https://github.com/GaetanBenoitDev/metaMDBG
+      doi: 10.1038/s41587-023-01983-6
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+    - reads:
+        type: file
+        description: Nanopore reads in FastQ format
+        pattern: "*.{fastq,fq}{,.gz}"
+        ontologies: []
+output:
+  contigs:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "*.contigs.fasta":
+          type: file
+          description: Assembled contigs
+          pattern: "*.contigs.fasta"
+          ontologies: []
+  log:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "*.metamdbg.log":
+          type: file
+          description: metaMDBG run log
+          pattern: "*.metamdbg.log"
+          ontologies: []
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from
+      - metamdbg:
+          type: string
+          description: The tool name
+      - "metaMDBG --version 2>&1 | sed -n 's/.*[Vv]ersion: *//p' | head -n 1":
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

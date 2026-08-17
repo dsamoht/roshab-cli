@@ -1,0 +1,63 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: diamond_blastx
+description: Align nucleotide reads against a protein database with DIAMOND
+keywords:
+  - diamond
+  - blastx
+  - alignment
+  - protein
+  - screening
+tools:
+  - diamond:
+      description: |
+        Accelerated BLAST-compatible local sequence aligner for protein and
+        translated DNA searches.
+      homepage: https://github.com/bbuchfink/diamond
+      documentation: https://github.com/bbuchfink/diamond
+      doi: 10.1038/s41592-021-01101-x
+      licence: ["GPL-3.0"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+    - reads:
+        type: file
+        description: Nanopore reads in FastQ format
+        pattern: "*.{fastq,fq}{,.gz}"
+        ontologies: []
+  - - db:
+        type: file
+        description: Protein sequences in FASTA or DIAMOND database format
+        pattern: "*.{faa,fasta,dmnd}"
+        ontologies: []
+output:
+  tsv:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "*.tsv":
+          type: file
+          description: Tabular DIAMOND alignments (outfmt 6)
+          pattern: "*.tsv"
+          ontologies: []
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from
+      - diamond:
+          type: string
+          description: The tool name
+      - "diamond --version | sed 's/^diamond version //'":
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

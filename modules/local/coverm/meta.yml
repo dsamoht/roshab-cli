@@ -1,0 +1,62 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: coverm
+description: Compute per-genome read coverage across the samples of a group
+keywords:
+  - coverage
+  - metagenomics
+  - mapping
+  - coverm
+  - minimap2
+tools:
+  - coverm:
+      description: |
+        Read coverage calculator for metagenomics, computing per-genome and per-
+        contig coverage statistics.
+      homepage: https://github.com/wwood/CoverM
+      documentation: https://github.com/wwood/CoverM
+      licence: ["GPL-3.0"]
+      identifier: ""
+input:
+  - - group_id:
+        type: string
+        description: Group identifier shared by the samples
+    - metas:
+        type: list
+        description: List of the sample meta maps, ordered to match `reads`
+    - reads:
+        type: file
+        description: QC reads for every sample of the group
+        pattern: "*.fastq.gz"
+        ontologies: []
+  - - genome_directory:
+        type: directory
+        description: Directory of reference genomes in FASTA format
+  - - db_name:
+        type: string
+        description: Short name of the genome database, used in the output file name
+output:
+  tsv:
+    - - group_id:
+          type: string
+          description: Group identifier
+      - "*.coverm.tsv":
+          type: file
+          description: Per-genome coverage table
+          pattern: "*.coverm.tsv"
+          ontologies: []
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from
+      - coverm:
+          type: string
+          description: The tool name
+      - "coverm --version | sed 's/^coverm //'":
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

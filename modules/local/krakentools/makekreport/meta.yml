@@ -1,0 +1,60 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: krakentools_makekreport
+description: Rebuild a Kraken2 report from per-read classifications
+keywords:
+  - kraken2
+  - krakentools
+  - report
+  - taxonomy
+tools:
+  - krakentools:
+      description: |
+        A suite of scripts to process and analyse Kraken, KrakenUniq, Kraken2 and
+        Bracken output.
+      homepage: https://github.com/jenniferlu717/KrakenTools
+      documentation: https://github.com/jenniferlu717/KrakenTools
+      doi: 10.1038/s41596-022-00738-y
+      licence: ["GPL-3.0"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+    - kraken_output:
+        type: file
+        description: Kraken2 per-read classification
+        pattern: "*.kraken.out"
+        ontologies: []
+  - - db:
+        type: directory
+        description: Kraken2 database directory containing `ktaxonomy.tsv`
+output:
+  report:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "*.kraken":
+          type: file
+          description: Kraken2 taxonomic report
+          pattern: "*.kraken"
+          ontologies: []
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from
+      - krakentools:
+          type: string
+          description: The tool name
+      - "python -c 'import importlib.metadata; print(importlib.metadata.version(\"krakentools\"))' 2>/dev/null || echo 1.2.1":
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

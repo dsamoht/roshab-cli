@@ -1,0 +1,17 @@
+.DS_Store
+group_*/assembly/*.fasta
+group_*/bgc/antismash/**
+group_*/bgc/gecco/**
+group_*/bgc/bigscape/**
+group_*/figures/*.pdf
+group_*/quality_assessment/**
+group_*/reads/post_qc/*.fastq.gz
+multiqc/multiqc_data/multiqc.parquet
+multiqc/multiqc_data/multiqc.log
+multiqc/multiqc_data/multiqc_data.json
+multiqc/multiqc_data/multiqc_sources.txt
+multiqc/multiqc_data/multiqc_software_versions.txt
+multiqc/multiqc_data/llms-full.txt
+multiqc/multiqc_plots/{svg,pdf,png}/*.{svg,pdf,png}
+multiqc/multiqc_report.html
+pipeline_info/*.{html,json,txt,yml}

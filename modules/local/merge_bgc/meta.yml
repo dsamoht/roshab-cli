@@ -1,0 +1,66 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: merge_bgc
+description: Reconcile antiSMASH, GECCO and DeepBGC calls into one table per sample
+keywords:
+  - bgc
+  - merge
+  - consensus
+  - biosynthetic gene cluster
+tools:
+  - python:
+      description: |
+        Python is a programming language that lets you work quickly and integrate
+        systems more effectively.
+      homepage: https://www.python.org
+      documentation: https://www.python.org
+      licence: ["PSF-2.0"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+    - antismash_json:
+        type: file
+        description: antiSMASH JSON results, or an empty list when antiSMASH found nothing
+        pattern: "*.json"
+        ontologies: []
+    - gecco_clusters:
+        type: file
+        description: GECCO cluster table, or an empty list when GECCO found nothing
+        pattern: "*.tsv"
+        ontologies: []
+    - deepbgc_tsv:
+        type: file
+        description: DeepBGC table, or an empty list when DeepBGC was not run
+        pattern: "*.tsv"
+        ontologies: []
+output:
+  tsv:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "*.bgc.tsv":
+          type: file
+          description: Merged BGC calls with a confidence tier per region
+          pattern: "*.bgc.tsv"
+          ontologies: []
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from
+      - python:
+          type: string
+          description: The tool name
+      - "python --version | sed 's/^Python //'":
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"
