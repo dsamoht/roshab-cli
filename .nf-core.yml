@@ -1,0 +1,68 @@
+repository_type: pipeline
+nf_core_version: 4.1.0
+lint:
+  # `roshab-cli` predates this migration and is published under that name, so the
+  # hyphen in the pipeline name is kept deliberately. Everything else follows the
+  # nf-core conventions.
+  pipeline_name_conventions: false
+  nextflow_config:
+    - manifest.name
+    - custom_config
+    # The execution reports are enabled only once `--outdir` is set, so that runs which
+    # never execute anything (`--help`, `--version`) do not create a `null/pipeline_info/`
+    # directory in the launch directory. The linter evaluates them with the default
+    # (unset) `--outdir` and therefore sees `false`.
+    - timeline.enabled
+    - report.enabled
+    - trace.enabled
+    - dag.enabled
+  # Not an nf-core-hosted pipeline: no nf-core logo, CODE_OF_CONDUCT or
+  # .github/workflows/awsfulltest.yml.
+  files_exist:
+    - assets/nf-core-roshab-cli_logo_light.png
+    - docs/images/nf-core-roshab-cli_logo_light.png
+    - docs/images/nf-core-roshab-cli_logo_dark.png
+    - .github/workflows/awsfulltest.yml
+    - .github/workflows/awstest.yml
+    - CODE_OF_CONDUCT.md
+    - .github/workflows/download_pipeline.yml
+    - .github/workflows/template_version_comment.yml
+    # Tool citations live in the README pipeline summary; releases and
+    # contribution guidance are kept on GitHub rather than in the repo.
+    - CITATIONS.md
+    - CHANGELOG.md
+    - docs/CONTRIBUTING.md
+    # No reference genomes: the pipeline takes explicit database paths instead.
+    - conf/igenomes.config
+    - conf/igenomes_ignored.config
+    # No full-size test: `-profile test` (a viral Kraken2 index and a two-genome
+    # CoverM database) is the only test profile.
+    - conf/test_full.config
+  # The generated report comment links to nf-co.re/<pipeline>, which does not
+  # exist for a pipeline hosted outside the nf-core organisation.
+  multiqc_config:
+    - report_comment
+  files_unchanged:
+    - .github/ISSUE_TEMPLATE/config.yml
+    - LICENSE
+    - README.md
+    - docs/README.md
+    # Template entries for files this pipeline does not have (no `modules/nf-core`,
+    # no CHANGELOG.md, no docs/CONTRIBUTING.md) have been dropped.
+    - .gitattributes
+    - .prettierignore
+    - .github/PULL_REQUEST_TEMPLATE.md
+  readme:
+    - nf_core_components
+template:
+  org: dsamoht
+  name: roshab-cli
+  description: Microbiome taxonomic classification and evaluation of cyanotoxin biosynthesis potential from nanopore reads
+  author: Thomas Deschenes
+  version: 1.0.0
+  is_nfcore: false
+  force: false
+  outdir: .
+  skip_features:
+    - igenomes
+    - fastqc

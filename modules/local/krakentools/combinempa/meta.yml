@@ -1,0 +1,54 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: krakentools_combinempa
+description: Combine several MPA profiles into a single table
+keywords:
+  - kraken2
+  - krakentools
+  - mpa
+  - merge
+  - taxonomy
+tools:
+  - krakentools:
+      description: |
+        A suite of scripts to process and analyse Kraken, KrakenUniq, Kraken2 and
+        Bracken output.
+      homepage: https://github.com/jenniferlu717/KrakenTools
+      documentation: https://github.com/jenniferlu717/KrakenTools
+      doi: 10.1038/s41596-022-00738-y
+      licence: ["GPL-3.0"]
+      identifier: ""
+input:
+  - - group_id:
+        type: string
+        description: Group identifier shared by the samples being combined
+    - mpa:
+        type: file
+        description: MPA profiles to combine
+        pattern: "*.mpa"
+        ontologies: []
+output:
+  mpa:
+    - - group_id:
+          type: string
+          description: Group identifier
+      - "*.combined.mpa":
+          type: file
+          description: Combined MPA profile for the group
+          pattern: "*.combined.mpa"
+          ontologies: []
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from
+      - krakentools:
+          type: string
+          description: The tool name
+      - "python -c 'import importlib.metadata; print(importlib.metadata.version(\"krakentools\"))' 2>/dev/null || echo 1.2.1":
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

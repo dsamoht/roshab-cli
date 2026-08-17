@@ -1,0 +1,42 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+name: "pipeline_completion"
+description: Send the completion email and print the run summary
+keywords:
+  - completion
+  - email
+  - summary
+components:
+  - completionemail
+  - completionsummary
+input:
+  - email:
+      type: string
+      description: |
+        Address the completion email is sent to.
+  - email_on_fail:
+      type: string
+      description: |
+        Address the completion email is sent to when the run fails.
+  - plaintext_email:
+      type: boolean
+      description: |
+        Send the completion email as plain text instead of HTML.
+  - outdir:
+      type: string
+      description: |
+        Directory every result is published to.
+  - monochrome_logs:
+      type: boolean
+      description: |
+        Disable ANSI colour codes in the log output.
+  - multiqc_report:
+      type: file
+      description: |
+        Channel holding the MultiQC report attached to the completion email.
+      pattern: "*.html"
+output: []
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

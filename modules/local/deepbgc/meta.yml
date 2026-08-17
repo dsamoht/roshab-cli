@@ -1,0 +1,70 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: deepbgc
+description: Detect biosynthetic gene clusters with a deep learning model
+keywords:
+  - bgc
+  - secondary metabolites
+  - biosynthetic gene cluster
+  - deepbgc
+  - deep learning
+tools:
+  - deepbgc:
+      description: |
+        Deep learning genome mining strategy for biosynthetic gene cluster
+        prediction.
+      homepage: https://github.com/Merck/deepbgc
+      documentation: https://github.com/Merck/deepbgc
+      doi: 10.1093/nar/gkz654
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+    - contigs:
+        type: file
+        description: Assembled contigs in FASTA format
+        pattern: "*.{fasta,fa,fna}"
+        ontologies: []
+  - - db:
+        type: directory
+        description: DeepBGC models directory
+output:
+  tsv:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "*.deepbgc.tsv":
+          type: file
+          description: Predicted BGC regions in tabular format
+          pattern: "*.deepbgc.tsv"
+          ontologies: []
+  results:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "${prefix}_deepbgc":
+          type: directory
+          description: Complete DeepBGC output directory
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from
+      - deepbgc:
+          type: string
+          description: The tool name
+      - "deepbgc --version":
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

@@ -1,0 +1,53 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: plot_gene_diamond
+description: Plot a cyanotoxin gene heatmap across the samples of a group
+keywords:
+  - visualisation
+  - heatmap
+  - diamond
+  - cyanotoxin
+  - figure
+tools:
+  - python:
+      description: |
+        Python is a programming language that lets you work quickly and integrate
+        systems more effectively.
+      homepage: https://www.python.org
+      documentation: https://www.python.org
+      licence: ["PSF-2.0"]
+      identifier: ""
+input:
+  - - group_id:
+        type: string
+        description: Group identifier
+    - diamond_tsvs:
+        type: file
+        description: DIAMOND tabular alignments for every sample of the group
+        pattern: "*.tsv"
+        ontologies: []
+output:
+  pdf:
+    - - group_id:
+          type: string
+          description: Group identifier
+      - "*.pdf":
+          type: file
+          description: Cyanotoxin gene heatmap
+          pattern: "*.pdf"
+          ontologies: []
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from
+      - python:
+          type: string
+          description: The tool name
+      - "python --version | sed 's/^Python //'":
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

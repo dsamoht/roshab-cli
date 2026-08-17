@@ -1,0 +1,72 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: bracken
+description: Re-estimate species abundance from a Kraken2 report
+keywords:
+  - taxonomy
+  - abundance
+  - metagenomics
+  - bracken
+  - kraken2
+tools:
+  - bracken:
+      description: |
+        Bayesian Reestimation of Abundance with KrakEN: computes species abundance
+        from Kraken classification results.
+      homepage: https://ccb.jhu.edu/software/bracken/
+      documentation: https://ccb.jhu.edu/software/bracken/
+      doi: 10.7717/peerj-cs.104
+      licence: ["GPL-3.0"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+    - kraken_report:
+        type: file
+        description: Kraken2 taxonomic report
+        pattern: "*.kraken"
+        ontologies: []
+  - - db:
+        type: directory
+        description: Kraken2/Bracken database directory
+output:
+  tsv:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "*.bracken.tsv":
+          type: file
+          description: Bracken abundance estimates
+          pattern: "*.bracken.tsv"
+          ontologies: []
+  report:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "*.bracken.report":
+          type: file
+          description: Kraken-style report with Bracken abundances
+          pattern: "*.bracken.report"
+          ontologies: []
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from
+      - bracken:
+          type: string
+          description: The tool name
+      - "bracken -v | sed 's/^Bracken v//'":
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"

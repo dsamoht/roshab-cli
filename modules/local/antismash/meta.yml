@@ -1,0 +1,81 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: antismash
+description: Detect and annotate biosynthetic gene clusters with antiSMASH
+keywords:
+  - bgc
+  - secondary metabolites
+  - biosynthetic gene cluster
+  - antismash
+  - annotation
+tools:
+  - antismash:
+      description: |
+        Antibiotics and Secondary Metabolite Analysis Shell: rule-based detection
+        and annotation of biosynthetic gene clusters.
+      homepage: https://antismash.secondarymetabolites.org
+      documentation: https://antismash.secondarymetabolites.org
+      doi: 10.1093/nar/gkad344
+      licence: ["AGPL-3.0"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+    - contigs:
+        type: file
+        description: Assembled contigs in FASTA format
+        pattern: "*.{fasta,fa,fna}"
+        ontologies: []
+  - - db:
+        type: directory
+        description: antiSMASH databases directory
+output:
+  json:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "${prefix}_antismash/${prefix}.json":
+          type: file
+          description: Machine-readable antiSMASH results
+          pattern: "*.json"
+          ontologies: []
+  regions:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "${prefix}_antismash/*.region*.gbk":
+          type: file
+          description: GenBank record per predicted BGC region
+          pattern: "*.region*.gbk"
+          ontologies: []
+  results:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1', group:'lake', info:'site1', date:'20260312' ]`
+      - "${prefix}_antismash":
+          type: directory
+          description: Complete antiSMASH output directory
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from
+      - antismash:
+          type: string
+          description: The tool name
+      - "antismash --version | sed 's/^antiSMASH //'":
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@dsamoht"
+maintainers:
+  - "@dsamoht"
