@@ -11,7 +11,6 @@ include { DEEPBGC                         } from '../../modules/local/deepbgc'
 include { DIAMOND_BLASTP                  } from '../../modules/local/diamond/blastp'
 include { FLYE                            } from '../../modules/local/flye'
 include { GECCO                           } from '../../modules/local/gecco'
-include { MEDAKA                          } from '../../modules/local/medaka'
 include { MERGE_BGC                       } from '../../modules/local/merge_bgc'
 include { METAMDBG                        } from '../../modules/local/metamdbg'
 include { PLOT_BGC                        } from '../../modules/local/plot_bgc'
@@ -19,8 +18,6 @@ include { PLOT_GENE_DIAMOND as PLOT_GENE_DIAMOND_CONTIGS } from '../../modules/l
 include { PYRODIGAL                       } from '../../modules/local/pyrodigal'
 include { SEQKIT_SEQ                      } from '../../modules/local/seqkit/seq'
 include { SEQKIT_STATS                    } from '../../modules/local/seqkit/stats'
-
-include { runMedakaPolishing } from '../../subworkflows/local/pipeline_initialisation'
 
 workflow ASSEMBLY_BGC {
 
@@ -69,21 +66,9 @@ workflow ASSEMBLY_BGC {
     }
 
     //
-    // Polish: off unless `--polish` is given, and `flye` assemblies only.
-    // `metamdbg` polishes internally, so Medaka never runs after it.
-    //
-    if (runMedakaPolishing()) {
-        MEDAKA(ch_assembly_in.join(ch_raw_contigs))
-        ch_polished = MEDAKA.out.contigs
-    }
-    else {
-        ch_polished = ch_raw_contigs
-    }
-
-    //
     // Drop short contigs before screening, then report assembly metrics
     //
-    SEQKIT_SEQ(ch_polished)
+    SEQKIT_SEQ(ch_raw_contigs)
     ch_contigs = SEQKIT_SEQ.out.contigs
 
     SEQKIT_STATS(ch_contigs)

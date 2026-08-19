@@ -158,7 +158,7 @@
                     "default": "reads",
                     "enum": ["reads", "assembly", "both"],
                     "description": "Cyanotoxin screening route.",
-                    "help_text": "`reads` runs `diamond blastx` on the QC reads (minutes). `assembly` assembles the reads and screens the contigs for biosynthetic gene clusters (hours, high memory). `both` runs the two routes on the same reads. Taxonomic profiling runs in every mode. Shortcuts: `-profile assembly` and `-profile full`.",
+                    "help_text": "`reads` runs `diamond blastx` on the QC reads (minutes). `assembly` assembles the reads and screens the contigs for biosynthetic gene clusters (hours, high memory). `both` runs the two routes on the same reads. Taxonomic profiling runs in every mode.",
                     "fa_icon": "fas fa-code-branch"
                 },
                 "skip_qc": {
@@ -215,6 +215,15 @@
             "fa_icon": "fas fa-sitemap",
             "description": "Kraken2, Bracken and CoverM options.",
             "properties": {
+                "kraken_confidence": {
+                    "type": "number",
+                    "default": 0.0,
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Kraken2 confidence score threshold, between 0 and 1.",
+                    "help_text": "Fraction of a read's k-mers that must map to a taxon's clade for the read to be assigned to it. `0` (the default) keeps Kraken2's own default behaviour; higher values make classification more conservative at the cost of sensitivity.",
+                    "fa_icon": "fas fa-percent"
+                },
                 "bracken_length": {
                     "type": "integer",
                     "default": 300,
@@ -251,7 +260,7 @@
                     "type": "string",
                     "default": "flye",
                     "enum": ["flye", "metamdbg"],
-                    "description": "Assembler used for the contig-level route. Shortcut: `-profile metamdbg`.",
+                    "description": "Assembler used for the contig-level route.",
                     "fa_icon": "fas fa-puzzle-piece"
                 },
                 "assembly_cpus": {
@@ -275,16 +284,6 @@
                     "type": "string",
                     "description": "Extra arguments passed to `metaMDBG`.",
                     "fa_icon": "fas fa-terminal"
-                },
-                "polish": {
-                    "type": "boolean",
-                    "description": "Polish the assembly with Medaka. Off by default, and only available with `--assembler flye`; `metamdbg` polishes internally and is never passed to Medaka.",
-                    "fa_icon": "fas fa-gem"
-                },
-                "medaka_model": {
-                    "type": "string",
-                    "description": "Medaka model to use. Defaults to letting Medaka choose.",
-                    "fa_icon": "fas fa-brain"
                 },
                 "min_contig_length": {
                     "type": "integer",
