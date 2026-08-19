@@ -28,7 +28,7 @@ process PYRODIGAL {
         -a ${prefix}.faa \\
         -o ${prefix}.gff \\
         -f gff \\
-        -j ${task.cpus}
+        -p meta
     """
 
     stub:
