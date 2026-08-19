@@ -15,7 +15,7 @@ potential. Requires Nextflow `>=25.10.4`.
 nextflow run . -profile test,docker --outdir results
 
 # Assembly/BGC route — needs an antiSMASH database, which the test profile does not supply
-nextflow run . -profile test,docker,assembly --outdir results --antismash_db <PATH>
+nextflow run . -profile test,docker --mode assembly --outdir results --antismash_db <PATH>
 
 # Install the reference databases (no analysis runs; `--outdir`/`--input` not needed)
 nextflow run . -profile docker --db_dir <PATH>
