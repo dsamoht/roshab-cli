@@ -24,7 +24,7 @@ process FLYE {
     """
     flye \\
         ${args} \\
-        ${reads} \\
+        --nano-hq ${reads} \\
         --out-dir flye_out \\
         --threads ${task.cpus}
 
