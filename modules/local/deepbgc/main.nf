@@ -14,7 +14,8 @@ process DEEPBGC {
     output:
     tuple val(meta), path("*.deepbgc.tsv"), emit: tsv, optional: true
     tuple val(meta), path("${prefix}_deepbgc"), emit: results, optional: true
-    tuple val("${task.process}"), val('deepbgc'), eval("deepbgc --version"), topic: versions
+    // `deepbgc --version` needs a COMMAND and exits 2, so report the pinned version instead
+    tuple val("${task.process}"), val('deepbgc'), val('0.1.31'), topic: versions
 
     when:
     task.ext.when == null || task.ext.when
