@@ -9,7 +9,7 @@ process BIGSCAPE {
         : 'quay.io/biocontainers/bigscape:2.0.3--pyhdfd78af_0'}"
 
     input:
-    tuple val(group_id), path(region_gbks)
+    tuple val(group_id), path(antismash_dirs)
     path pfam_db
 
     output:
@@ -22,11 +22,26 @@ process BIGSCAPE {
     script:
     args = task.ext.args ?: ''
     prefix = task.ext.prefix ?: "group_${group_id}"
+    // antiSMASH names its region files after the contig, so two samples of the same
+    // group collide on e.g. `contig_1.region001.gbk`. The whole antiSMASH directory is
+    // staged instead of the bare region files -- `<sample>_antismash` is unique -- and
+    // the regions are copied out under a sample-prefixed name.
     """
     export HOME="\$PWD"
 
     mkdir -p gbk_input
-    cp ${region_gbks} gbk_input/
+    for dir in ${antismash_dirs}; do
+        sample=\$(basename "\${dir}" _antismash)
+        for gbk in "\${dir}"/*.region*.gbk; do
+            [ -e "\${gbk}" ] || continue
+            cp "\${gbk}" "gbk_input/\${sample}_\$(basename "\${gbk}")"
+        done
+    done
+
+    if ! ls gbk_input/*.gbk > /dev/null 2>&1; then
+        echo "No antiSMASH region found for group ${group_id} -- skipping BiG-SCAPE" >&2
+        exit 0
+    fi
 
     bigscape cluster \\
         ${args} \\
