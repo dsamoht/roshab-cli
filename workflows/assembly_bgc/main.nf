@@ -133,10 +133,13 @@ workflow ASSEMBLY_BGC {
     // Optional gene cluster family clustering across the samples of a group
     //
     if (params.run_bigscape) {
-        ch_bigscape_in = ANTISMASH.out.regions
-            .map { meta, gbks -> tuple(meta.group, gbks) }
+        // The antiSMASH directories, not the bare region files: their names carry the
+        // sample id, which BIGSCAPE needs to tell apart region files of two samples
+        // that share a contig name
+        ch_bigscape_in = ANTISMASH.out.results
+            .map { meta, results_dir -> tuple(meta.group, tuple(meta.id, results_dir)) }
             .groupTuple()
-            .map { group_id, gbks -> tuple(group_id, gbks.flatten()) }
+            .map { group_id, entries -> tuple(group_id, entries.sort { e -> e[0] }.collect { e -> e[1] }) }
 
         BIGSCAPE(ch_bigscape_in, file(params.pfam_db, checkIfExists: true))
         ch_bigscape_results = BIGSCAPE.out.results
