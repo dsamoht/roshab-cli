@@ -22,11 +22,12 @@ input:
   - - group_id:
         type: string
         description: Group identifier shared by the samples
-    - region_gbks:
-        type: file
-        description: antiSMASH region GenBank files for every sample of the group
-        pattern: "*.region*.gbk"
-        ontologies: []
+    - antismash_dirs:
+        type: directory
+        description: |
+          antiSMASH output directories of every sample of the group; the region
+          GenBank files they hold are copied out under a sample-prefixed name
+        pattern: "*_antismash"
   - - pfam_db:
         type: file
         description: Pfam-A HMM database
