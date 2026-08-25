@@ -12,8 +12,8 @@
                     "string",
                     "integer"
                 ],
-                "pattern": "^\\S+$",
-                "errorMessage": "Sample name must be provided and cannot contain spaces",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+                "errorMessage": "Sample name must be provided, start with a letter or digit and contain only letters, digits, dots, underscores and hyphens",
                 "meta": [
                     "id"
                 ]

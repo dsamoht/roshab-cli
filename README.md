@@ -33,7 +33,7 @@ one of two routes, selected with `--mode`:
 | `assembly`        | assembly + biosynthetic gene cluster (BGC) screening of the contigs | hours, high memory |
 | `both`            | run both                                           |                    |
 
-Figures and BiG-SCAPE are computed per `group`; every other step is per sample.
+Figures are computed per `group`; every other step is per sample.
 
 ### Pipeline summary
 **1. QA/QC**
@@ -54,7 +54,6 @@ Figures and BiG-SCAPE are computed per `group`; every other step is per sample.
 - Assemble ([`metaFlye`](https://github.com/mikolmogorov/Flye) or [`metaMDBG`](https://github.com/GaetanBenoitDev/metaMDBG)), filter short contigs and report assembly metrics ([`SeqKit`](https://bioinf.shenwei.me/seqkit/))
 - Predict proteins ([`Pyrodigal`](https://github.com/althonos/pyrodigal)) and screen them against the cyanotoxin gene database ([`DIAMOND`](https://github.com/bbuchfink/diamond))
 - BGC detection ([`antiSMASH`](https://antismash.secondarymetabolites.org), [`GECCO`](https://gecco.embl.de), optionally [`DeepBGC`](https://github.com/Merck/deepbgc)), reconciled into one table per sample where regions supported by at least two tools are labelled `high` confidence
-- Optionally cluster the antiSMASH regions of a group into gene cluster families ([`BiG-SCAPE`](https://github.com/medema-group/BiG-SCAPE))
 
 ## Usage
 First, prepare a samplesheet with your input data that looks as follows:

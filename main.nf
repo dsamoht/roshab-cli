@@ -114,11 +114,17 @@ workflow ROSHAB_CLI {
     SPLIT_KRAKEN_OUTPUT(KRAKEN2.out.classified_reads_assignment)
 
     // Give the full sample metadata back to the split files by joining on the
-    // sample name that `SPLIT_KRAKEN_OUTPUT` recovered from the read IDs
+    // sample name that `SPLIT_KRAKEN_OUTPUT` recovered from the read IDs. Strip the
+    // suffix rather than using `simpleName`, which cuts at the first dot and would
+    // key `S1.rep2.kraken.out` as `S1`; the join then silently drops that sample.
     ch_kraken_stdout = SPLIT_KRAKEN_OUTPUT.out.split
         .transpose()
-        .map { _meta, kraken_file -> [kraken_file.simpleName, kraken_file] }
-        .join(ch_samplesheet.map { meta, _reads -> [meta.id, meta] })
+        .map { _meta, kraken_file -> [kraken_file.name.replaceAll(/\.kraken\.out$/, ''), kraken_file] }
+        .join(
+            ch_samplesheet.map { meta, _reads -> [meta.id, meta] },
+            failOnMismatch: true,
+            failOnDuplicate: true,
+        )
         .map { _id, kraken_file, meta -> [meta, kraken_file] }
 
     //
@@ -168,17 +174,23 @@ workflow ROSHAB_CLI {
     //
     ch_diamond_tsv = channel.empty()
     ch_diamond_plot = channel.empty()
+    ch_diamond_evidence = channel.empty()
 
     if (params.mode in ['reads', 'both']) {
         DIAMOND_BLASTX(ch_qc_reads, ch_genes_db)
         ch_diamond_tsv = DIAMOND_BLASTX.out.tsv
 
         ch_heatmap_in = ch_diamond_tsv
-            .map { meta, tsv -> tuple(meta.group, tsv) }
+            .map { meta, tsv -> tuple(meta.group, [meta, tsv]) }
             .groupTuple()
+            .map { group_id, metadata_and_file ->
+                def sorted_items = metadata_and_file.sort { entry -> entry[0].id }
+                return tuple(group_id, sorted_items.collect { entry -> entry[1] })
+            }
 
-        PLOT_GENE_DIAMOND_READS(ch_heatmap_in)
+        PLOT_GENE_DIAMOND_READS(ch_heatmap_in, ch_genes_db)
         ch_diamond_plot = PLOT_GENE_DIAMOND_READS.out.pdf
+        ch_diamond_evidence = PLOT_GENE_DIAMOND_READS.out.tsv
     }
 
     //
@@ -191,13 +203,13 @@ workflow ROSHAB_CLI {
         proteins: channel.empty(),
         blastp_tsv: channel.empty(),
         blastp_plot: channel.empty(),
+        blastp_evidence: channel.empty(),
         antismash_results: channel.empty(),
         gecco_results: channel.empty(),
         deepbgc_tsv: channel.empty(),
         bgc_tsv: channel.empty(),
         bgc_plot: channel.empty(),
         bgc_summary: channel.empty(),
-        bigscape_results: channel.empty(),
     ]
 
     if (params.mode in ['assembly', 'both']) {
@@ -269,6 +281,7 @@ workflow ROSHAB_CLI {
     kraken_doc        = PLOT_KRAKEN.out.pdf
     diamond_tsv       = ch_diamond_tsv
     diamond_plot      = ch_diamond_plot
+    diamond_evidence  = ch_diamond_evidence
     coverm_genome_out = COVERM.out.tsv
     coverm_plot_out   = PLOT_COVERM.out.pdf
     contigs           = ch_assembly.contigs
@@ -276,13 +289,13 @@ workflow ROSHAB_CLI {
     proteins          = ch_assembly.proteins
     blastp_tsv        = ch_assembly.blastp_tsv
     blastp_plot       = ch_assembly.blastp_plot
+    blastp_evidence   = ch_assembly.blastp_evidence
     antismash_results = ch_assembly.antismash_results
     gecco_results     = ch_assembly.gecco_results
     deepbgc_tsv       = ch_assembly.deepbgc_tsv
     bgc_tsv           = ch_assembly.bgc_tsv
     bgc_plot          = ch_assembly.bgc_plot
     bgc_summary       = ch_assembly.bgc_summary
-    bigscape_results  = ch_assembly.bigscape_results
     multiqc_html      = MULTIQC.out.report
     multiqc_data      = MULTIQC.out.data
     multiqc_report    = MULTIQC.out.report.map { _meta, report -> [report] }.toList()
@@ -359,6 +372,7 @@ workflow {
     kraken_doc        = install_only ? channel.empty() : ROSHAB_CLI.out.kraken_doc
     diamond_tsv       = install_only ? channel.empty() : ROSHAB_CLI.out.diamond_tsv
     diamond_plot      = install_only ? channel.empty() : ROSHAB_CLI.out.diamond_plot
+    diamond_evidence  = install_only ? channel.empty() : ROSHAB_CLI.out.diamond_evidence
     coverm_genome_out = install_only ? channel.empty() : ROSHAB_CLI.out.coverm_genome_out
     coverm_plot_out   = install_only ? channel.empty() : ROSHAB_CLI.out.coverm_plot_out
     contigs           = install_only ? channel.empty() : ROSHAB_CLI.out.contigs
@@ -366,13 +380,13 @@ workflow {
     proteins          = install_only ? channel.empty() : ROSHAB_CLI.out.proteins
     blastp_tsv        = install_only ? channel.empty() : ROSHAB_CLI.out.blastp_tsv
     blastp_plot       = install_only ? channel.empty() : ROSHAB_CLI.out.blastp_plot
+    blastp_evidence   = install_only ? channel.empty() : ROSHAB_CLI.out.blastp_evidence
     antismash_results = install_only ? channel.empty() : ROSHAB_CLI.out.antismash_results
     gecco_results     = install_only ? channel.empty() : ROSHAB_CLI.out.gecco_results
     deepbgc_tsv       = install_only ? channel.empty() : ROSHAB_CLI.out.deepbgc_tsv
     bgc_tsv           = install_only ? channel.empty() : ROSHAB_CLI.out.bgc_tsv
     bgc_plot          = install_only ? channel.empty() : ROSHAB_CLI.out.bgc_plot
     bgc_summary       = install_only ? channel.empty() : ROSHAB_CLI.out.bgc_summary
-    bigscape_results  = install_only ? channel.empty() : ROSHAB_CLI.out.bigscape_results
     multiqc_html      = install_only ? channel.empty() : ROSHAB_CLI.out.multiqc_html
     multiqc_data      = install_only ? channel.empty() : ROSHAB_CLI.out.multiqc_data
 }
@@ -425,6 +439,9 @@ output {
     diamond_plot {
         path { group_id, _file -> "group_${group_id}/figures" }
     }
+    diamond_evidence {
+        path { group_id, _file -> "group_${group_id}/diamond" }
+    }
     coverm_genome_out {
         path { group_id, _file -> "group_${group_id}/coverm" }
     }
@@ -446,6 +463,9 @@ output {
     blastp_plot {
         path { group_id, _file -> "group_${group_id}/figures" }
     }
+    blastp_evidence {
+        path { group_id, _file -> "group_${group_id}/diamond_contigs" }
+    }
     antismash_results {
         path { meta, _file -> "group_${meta.group}/bgc/antismash" }
     }
@@ -463,9 +483,6 @@ output {
     }
     bgc_summary {
         path { group_id, _file -> "group_${group_id}/bgc" }
-    }
-    bigscape_results {
-        path { group_id, _file -> "group_${group_id}/bgc/bigscape" }
     }
     multiqc_html {
         path { _meta, _file -> "multiqc" }

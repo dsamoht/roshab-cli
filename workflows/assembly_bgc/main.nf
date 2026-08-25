@@ -3,7 +3,6 @@
 //
 
 include { ANTISMASH                       } from '../../modules/local/antismash'
-include { BIGSCAPE                        } from '../../modules/local/bigscape'
 include { CAT_READS as CAT_COASSEMBLY     } from '../../modules/local/cat'
 include { DECOMPRESS as PREP_ANTISMASH_DB } from '../../modules/local/decompress'
 include { DECOMPRESS as PREP_DEEPBGC_DB   } from '../../modules/local/decompress'
@@ -118,35 +117,24 @@ workflow ASSEMBLY_BGC {
     // Group-level figures, mirroring the read-level outputs
     //
     ch_bgc_by_group = MERGE_BGC.out.tsv
-        .map { meta, tsv -> tuple(meta.group, tsv) }
+        .map { meta, tsv -> tuple(meta.group, [meta, tsv]) }
         .groupTuple()
+        .map { group_id, metadata_and_file ->
+            def sorted_items = metadata_and_file.sort { entry -> entry[0].id }
+            return tuple(group_id, sorted_items.collect { entry -> entry[1] })
+        }
 
     PLOT_BGC(ch_bgc_by_group)
 
     ch_blastp_by_group = DIAMOND_BLASTP.out.tsv
-        .map { meta, tsv -> tuple(meta.group, tsv) }
+        .map { meta, tsv -> tuple(meta.group, [meta, tsv]) }
         .groupTuple()
+        .map { group_id, metadata_and_file ->
+            def sorted_items = metadata_and_file.sort { entry -> entry[0].id }
+            return tuple(group_id, sorted_items.collect { entry -> entry[1] })
+        }
 
-    PLOT_GENE_DIAMOND_CONTIGS(ch_blastp_by_group)
-
-    //
-    // Optional gene cluster family clustering across the samples of a group
-    //
-    if (params.run_bigscape) {
-        // The antiSMASH directories, not the bare region files: their names carry the
-        // sample id, which BIGSCAPE needs to tell apart region files of two samples
-        // that share a contig name
-        ch_bigscape_in = ANTISMASH.out.results
-            .map { meta, results_dir -> tuple(meta.group, tuple(meta.id, results_dir)) }
-            .groupTuple()
-            .map { group_id, entries -> tuple(group_id, entries.sort { e -> e[0] }.collect { e -> e[1] }) }
-
-        BIGSCAPE(ch_bigscape_in, file(params.pfam_db, checkIfExists: true))
-        ch_bigscape_results = BIGSCAPE.out.results
-    }
-    else {
-        ch_bigscape_results = channel.empty()
-    }
+    PLOT_GENE_DIAMOND_CONTIGS(ch_blastp_by_group, ch_genes_db)
 
     emit:
     contigs           = ch_contigs                          // channel: [ val(meta), path(fasta) ]
@@ -154,11 +142,11 @@ workflow ASSEMBLY_BGC {
     proteins          = PYRODIGAL.out.faa                   // channel: [ val(meta), path(faa) ]
     blastp_tsv        = DIAMOND_BLASTP.out.tsv              // channel: [ val(meta), path(tsv) ]
     blastp_plot       = PLOT_GENE_DIAMOND_CONTIGS.out.pdf   // channel: [ val(group_id), path(pdf) ]
+    blastp_evidence   = PLOT_GENE_DIAMOND_CONTIGS.out.tsv   // channel: [ val(group_id), path(tsv) ]
     antismash_results = ANTISMASH.out.results               // channel: [ val(meta), path(dir) ]
     gecco_results     = GECCO.out.results                   // channel: [ val(meta), path(dir) ]
     deepbgc_tsv       = ch_deepbgc_tsv                      // channel: [ val(meta), path(tsv) ]
     bgc_tsv           = MERGE_BGC.out.tsv                   // channel: [ val(meta), path(tsv) ]
     bgc_plot          = PLOT_BGC.out.pdf                    // channel: [ val(group_id), path(pdf) ]
     bgc_summary       = PLOT_BGC.out.tsv                    // channel: [ val(group_id), path(tsv) ]
-    bigscape_results  = ch_bigscape_results                 // channel: [ val(group_id), path(dir) ]
 }

@@ -2,8 +2,13 @@
 """Merge BGC predictions from antiSMASH, GECCO and DeepBGC into one table.
 
 Regions from the different tools rarely share exact boundaries, so calls are
-merged per contig whenever they overlap by at least `--min-overlap` bases. The
-number of tools supporting a merged region is used as a confidence tier.
+merged per contig whenever they overlap an already-merged component by at least
+`--min-overlap` bases *and* by `--min-overlap-frac` of the shorter of the two
+intervals. Testing against each component rather than against the growing union
+stops one long, permissive call from chaining two distinct clusters into one.
+
+Confidence is weighted by method, not counted: antiSMASH is the rule-based
+reference, so a region it supports outranks one called only by the ML tools.
 
 Only the standard library is used so the script runs in any python container.
 """
@@ -26,6 +31,8 @@ def parse_args():
     parser.add_argument('--deepbgc', help='DeepBGC BGC TSV')
     parser.add_argument('--min-overlap', type=int, default=500,
                         help='Minimum overlap (bp) for two calls to be considered the same region')
+    parser.add_argument('--min-overlap-frac', type=float, default=0.5,
+                        help='Minimum overlap as a fraction of the shorter of the two intervals')
     parser.add_argument('-o', '--output', default='bgc.tsv', help='Output TSV')
     return parser.parse_args()
 
@@ -111,8 +118,44 @@ def parse_tabular(path, contig_keys, start_keys, end_keys, product_keys, start_i
     return calls
 
 
-def merge_calls(calls_by_tool, min_overlap):
-    """Union overlapping intervals per contig, tracking which tools support each."""
+def _new_region(start, end, tool, products):
+    return {
+        'start': start,
+        'end': end,
+        'tools': {tool},
+        'products': set(products),
+        'components': [(start, end, tool)],
+    }
+
+
+def _absorb(region, start, end, tool, products):
+    region['start'] = min(region['start'], start)
+    region['end'] = max(region['end'], end)
+    region['tools'].add(tool)
+    region['products'].update(products)
+    region['components'].append((start, end, tool))
+
+
+def _joins(region, start, end, min_overlap, min_overlap_frac):
+    """A call joins a region when it overlaps one of its *components*.
+
+    Testing against the components rather than the running union is what keeps a
+    long bridging call from gluing two distinct clusters together: the union end
+    grows with every absorbed call, so a union test chains indefinitely.
+    """
+    length = end - start
+    for c_start, c_end, _tool in region['components']:
+        overlap = min(c_end, end) - max(c_start, start)
+        if overlap < min_overlap:
+            continue
+        shorter = min(length, c_end - c_start)
+        if shorter > 0 and overlap >= min_overlap_frac * shorter:
+            return True
+    return False
+
+
+def merge_calls(calls_by_tool, min_overlap, min_overlap_frac):
+    """Group overlapping intervals per contig, tracking which tools support each."""
     per_contig = {}
     for tool, calls in calls_by_tool.items():
         for contig, start, end, products in calls:
@@ -125,22 +168,33 @@ def merge_calls(calls_by_tool, min_overlap):
 
         for start, end, tool, products in intervals:
             if current is None:
-                current = {'start': start, 'end': end, 'tools': {tool}, 'products': set(products)}
-                continue
-
-            overlap = min(current['end'], end) - start
-            if overlap >= min_overlap:
-                current['end'] = max(current['end'], end)
-                current['tools'].add(tool)
-                current['products'].update(products)
+                current = _new_region(start, end, tool, products)
+            elif _joins(current, start, end, min_overlap, min_overlap_frac):
+                _absorb(current, start, end, tool, products)
             else:
                 merged.append((contig, current))
-                current = {'start': start, 'end': end, 'tools': {tool}, 'products': set(products)}
+                current = _new_region(start, end, tool, products)
 
         if current is not None:
             merged.append((contig, current))
 
     return merged
+
+
+def classify(tools, n_tools_run):
+    """Confidence tier, weighted by method rather than by tool count.
+
+    antiSMASH is the rule-based reference; GECCO and DeepBGC are both ML models
+    trained on overlapping MIBiG data, so their agreement is not independent
+    evidence and must not outrank an antiSMASH call.
+    """
+    if n_tools_run == 1:
+        return 'single-tool'
+
+    others = [tool for tool in tools if tool != 'antismash']
+    if 'antismash' in tools:
+        return 'high' if others else 'medium'
+    return 'candidate' if len(others) >= 2 else 'low'
 
 
 def main():
@@ -185,23 +239,18 @@ def main():
         print("No BGC detection output provided. Nothing to merge.", file=sys.stderr)
         return
 
-    merged = merge_calls(calls_by_tool, args.min_overlap)
+    merged = merge_calls(calls_by_tool, args.min_overlap, args.min_overlap_frac)
 
     with open(args.output, 'w', newline='') as handle:
         writer = csv.writer(handle, delimiter='\t', lineterminator='\n')
         writer.writerow(['sample', 'contig', 'start', 'end', 'length',
-                         'n_tools', 'tools', 'products', 'confidence'])
+                         'n_tools', 'tools', 'products', 'confidence',
+                         'n_components', 'component_intervals'])
 
         for contig, region in merged:
             tools = sorted(region['tools'])
             products = sorted(p for p in region['products'] if p)
-
-            if n_tools_run == 1:
-                confidence = 'single-tool'
-            elif len(tools) >= 2:
-                confidence = 'high'
-            else:
-                confidence = 'low'
+            components = sorted(region['components'], key=lambda c: (c[0], c[1], c[2]))
 
             writer.writerow([
                 args.sample,
@@ -212,7 +261,9 @@ def main():
                 len(tools),
                 ','.join(tools),
                 ','.join(products) if products else 'unknown',
-                confidence,
+                classify(tools, n_tools_run),
+                len(components),
+                ';'.join(f"{tool}:{start}-{end}" for start, end, tool in components),
             ])
 
     print(f"Wrote {len(merged)} merged region(s) to {args.output}")

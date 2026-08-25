@@ -77,12 +77,11 @@ The install processes (`INSTALL_DB`, `ANTISMASH_DOWNLOAD`, `DEEPBGC_DOWNLOAD`) w
 makes an already-installed database be skipped. `storeDir` rejects `eval`/topic outputs, so those
 processes emit no `versions` topic. Pfam is the sharp edge: antiSMASH and DeepBGC each fetch their
 own release from `ftp.ebi.ac.uk`, which truncates concurrent downloads — hence the ordering token
-input on `DEEPBGC_DOWNLOAD`, the `error_retry` labels, and `--pfam_db` pointing into `antismash_db`
-instead of downloading a third copy.
+input on `DEEPBGC_DOWNLOAD` and the `error_retry` labels.
 
 **`meta.group` is the fan-in key.** Per-sample channels are `[meta, file]`; group-level channels are
 `[group_id, files]` after `.map { meta, f -> tuple(meta.group, ...) }.groupTuple()`. Sort by
-`meta.id` inside the group before collecting, so results are reproducible. Figures and BiG-SCAPE are
+`meta.id` inside the group before collecting, so results are reproducible. Figures are
 group-level; everything else is per-sample. All results publish under `group_<group>/`.
 
 **One Kraken2 run for all samples.** `CAT_INIT` stamps `meta.id` onto every read ID, `CAT_PRE_KRAKEN`
@@ -118,7 +117,7 @@ Do not add `publishDir` to a module.
 - New parameters must be added to `nextflow_schema.json` (`nf-core pipelines schema build`) or
   validation rejects them. Cross-parameter rules the schema cannot express go in
   `validateInputParameters()` in `subworkflows/local/pipeline_initialisation/main.nf`. That file also
-  holds the pipeline-level helper functions (`runMedakaPolishing`, `methodsDescriptionText` and the
+  holds the pipeline-level helper functions (`methodsDescriptionText` and the
   citation text builders): `nf-core pipelines lint` crashes on a local subworkflow whose `main.nf`
   has no `workflow` block, so they cannot live in a directory of their own.
 - This pipeline deliberately diverges from the nf-core template (hyphenated name, no nf-core logo,
