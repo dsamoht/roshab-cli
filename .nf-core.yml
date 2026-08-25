@@ -32,6 +32,8 @@ lint:
     - CITATIONS.md
     - CHANGELOG.md
     - docs/CONTRIBUTING.md
+    # Pull requests are reviewed on GitHub without a template (removed in aed3bdc).
+    - .github/PULL_REQUEST_TEMPLATE.md
     # No reference genomes: the pipeline takes explicit database paths instead.
     - conf/igenomes.config
     - conf/igenomes_ignored.config

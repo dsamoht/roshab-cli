@@ -58,6 +58,7 @@ workflow PIPELINE_INITIALISATION {
 
  Taxonomic classification and evaluation of cyanotoxin biosynthesis
  potential from nanopore reads.
+
 """
     def after_text = ""
 
@@ -134,13 +135,10 @@ def validateInputParameters() {
         if (params.run_deepbgc && !params.deepbgc_db) {
             error("`--run_deepbgc` requires `--deepbgc_db`.")
         }
-        if (params.run_bigscape && !params.pfam_db) {
-            error("`--run_bigscape` requires `--pfam_db` pointing at `Pfam-A.hmm`.")
-        }
     }
     else {
-        if (params.run_deepbgc || params.run_bigscape || params.coassemble_by_group) {
-            log.warn("`--run_deepbgc`, `--run_bigscape` and `--coassemble_by_group` only apply to the assembly route and are ignored with `--mode ${params.mode}`.")
+        if (params.run_deepbgc || params.coassemble_by_group) {
+            log.warn("`--run_deepbgc` and `--coassemble_by_group` only apply to the assembly route and are ignored with `--mode ${params.mode}`.")
         }
     }
 }
@@ -164,7 +162,6 @@ def toolCitationText() {
         params.mode in ['assembly', 'both'] ? "antiSMASH (Blin et al. 2023)," : "",
         params.mode in ['assembly', 'both'] ? "GECCO (Carroll et al. 2021)," : "",
         params.mode in ['assembly', 'both'] && params.run_deepbgc ? "DeepBGC (Hannigan et al. 2019)," : "",
-        params.mode in ['assembly', 'both'] && params.run_bigscape ? "BiG-SCAPE (Navarro-Munoz et al. 2020)," : "",
         "MultiQC (Ewels et al. 2016)",
         ".",
     ]
@@ -187,7 +184,6 @@ def toolBibliographyText() {
         params.mode in ['assembly', 'both'] ? "<li>Blin K, Shaw S, Augustijn HE, et al. antiSMASH 7.0: new and improved predictions. Nucleic Acids Res. 2023;51(W1):W46-W50. doi: 10.1093/nar/gkad344</li>" : "",
         params.mode in ['assembly', 'both'] ? "<li>Carroll LM, Larralde M, Fleck JS, et al. Accurate de novo identification of biosynthetic gene clusters with GECCO. bioRxiv. 2021. doi: 10.1101/2021.05.03.442509</li>" : "",
         params.mode in ['assembly', 'both'] && params.run_deepbgc ? "<li>Hannigan GD, Prihoda D, Palicka A, et al. A deep learning genome-mining strategy for biosynthetic gene cluster prediction. Nucleic Acids Res. 2019;47(18):e110. doi: 10.1093/nar/gkz654</li>" : "",
-        params.mode in ['assembly', 'both'] && params.run_bigscape ? "<li>Navarro-Munoz JC, Selem-Mojica N, Mullowney MW, et al. A computational framework to explore large-scale biosynthetic diversity. Nat Chem Biol. 2020;16(1):60-68. doi: 10.1038/s41589-019-0400-9</li>" : "",
         "<li>Ewels P, Magnusson M, Lundin S, Kaller M. MultiQC: summarize analysis results for multiple tools and samples in a single report. Bioinformatics. 2016;32(19):3047-3048. doi: 10.1093/bioinformatics/btw354</li>",
     ]
     return references.findAll { entry -> entry }.join(' ').trim()

@@ -1,0 +1,215 @@
+{
+    "-profile test": {
+        "content": [
+            {
+                "BRACKEN": {
+                    "bracken": "3.0.1"
+                },
+                "CAT_INIT": {
+                    "python": "3.10.20"
+                },
+                "CAT_PRE_KRAKEN": {
+                    "python": "3.10.20"
+                },
+                "CHOPPER": {
+                    "chopper": "0.8.0"
+                },
+                "COVERM": {
+                    "coverm": "0.7.0"
+                },
+                "DIAMOND_BLASTX": {
+                    "diamond": "2.1.23"
+                },
+                "KRAKEN2": {
+                    "kraken2": "2.17.1"
+                },
+                "KRAKENTOOLS_COMBINEMPA": {
+                    "krakentools": "1.2.1"
+                },
+                "KRAKENTOOLS_KREPORT2MPA": {
+                    "krakentools": "1.2.1"
+                },
+                "KRAKENTOOLS_MAKEKREPORT": {
+                    "krakentools": "1.2.1"
+                },
+                "NANOPLOT_QC": {
+                    "nanoplot": "1.46.1"
+                },
+                "NANOPLOT_RAW": {
+                    "nanoplot": "1.46.1"
+                },
+                "PLOT_COVERM": {
+                    "python": "3.10.20"
+                },
+                "PLOT_GENE_DIAMOND_READS": {
+                    "python": "3.10.20"
+                },
+                "PLOT_KRAKEN": {
+                    "python": "3.10.20"
+                },
+                "SEQKIT_SLIDING": {
+                    "seqkit": "2.13.0"
+                },
+                "Workflow": {
+                    "dsamoht/roshab-cli": "v1.0.0"
+                }
+            },
+            [
+                "group_test",
+                "group_test/bracken",
+                "group_test/bracken/nanosim.bracken.report",
+                "group_test/bracken/nanosim.bracken.tsv",
+                "group_test/bracken/nanosim.mpa",
+                "group_test/bracken/test.combined.mpa",
+                "group_test/bracken/test3.bracken.report",
+                "group_test/bracken/test3.bracken.tsv",
+                "group_test/bracken/test3.mpa",
+                "group_test/bracken/test4.bracken.report",
+                "group_test/bracken/test4.bracken.tsv",
+                "group_test/bracken/test4.mpa",
+                "group_test/coverm",
+                "group_test/coverm/group_test_cyanobacteria.coverm.tsv",
+                "group_test/diamond",
+                "group_test/diamond/group_test_cyanotoxins_evidence.tsv",
+                "group_test/diamond/nanosim.diamond.tsv",
+                "group_test/diamond/test3.diamond.tsv",
+                "group_test/diamond/test4.diamond.tsv",
+                "group_test/figures",
+                "group_test/figures/group_test_coverm_genome_coverage_barplots.pdf",
+                "group_test/figures/group_test_cyanotoxins_heatmap.pdf",
+                "group_test/figures/group_test_kraken_cyano_barplots.pdf",
+                "group_test/kraken",
+                "group_test/kraken/nanosim.kraken",
+                "group_test/kraken/nanosim.kraken.out",
+                "group_test/kraken/test3.kraken",
+                "group_test/kraken/test3.kraken.out",
+                "group_test/kraken/test4.kraken",
+                "group_test/kraken/test4.kraken.out",
+                "group_test/quality_assessment",
+                "group_test/quality_assessment/nanoplot",
+                "group_test/quality_assessment/nanoplot/post_qc",
+                "group_test/quality_assessment/nanoplot/post_qc/nanosim",
+                "group_test/quality_assessment/nanoplot/post_qc/nanosim/nanosim_qc_LengthvsQualityScatterPlot_dot.html",
+                "group_test/quality_assessment/nanoplot/post_qc/nanosim/nanosim_qc_LengthvsQualityScatterPlot_kde.html",
+                "group_test/quality_assessment/nanoplot/post_qc/nanosim/nanosim_qc_NanoPlot-report.html",
+                "group_test/quality_assessment/nanoplot/post_qc/nanosim/nanosim_qc_Non_weightedHistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/post_qc/nanosim/nanosim_qc_Non_weightedLogTransformed_HistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/post_qc/nanosim/nanosim_qc_WeightedHistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/post_qc/nanosim/nanosim_qc_WeightedLogTransformed_HistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/post_qc/nanosim/nanosim_qc_Yield_By_Length.html",
+                "group_test/quality_assessment/nanoplot/post_qc/test3",
+                "group_test/quality_assessment/nanoplot/post_qc/test3/test3_qc_LengthvsQualityScatterPlot_dot.html",
+                "group_test/quality_assessment/nanoplot/post_qc/test3/test3_qc_LengthvsQualityScatterPlot_kde.html",
+                "group_test/quality_assessment/nanoplot/post_qc/test3/test3_qc_NanoPlot-report.html",
+                "group_test/quality_assessment/nanoplot/post_qc/test3/test3_qc_Non_weightedHistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/post_qc/test3/test3_qc_Non_weightedLogTransformed_HistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/post_qc/test3/test3_qc_WeightedHistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/post_qc/test3/test3_qc_WeightedLogTransformed_HistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/post_qc/test3/test3_qc_Yield_By_Length.html",
+                "group_test/quality_assessment/nanoplot/post_qc/test4",
+                "group_test/quality_assessment/nanoplot/post_qc/test4/test4_qc_LengthvsQualityScatterPlot_dot.html",
+                "group_test/quality_assessment/nanoplot/post_qc/test4/test4_qc_LengthvsQualityScatterPlot_kde.html",
+                "group_test/quality_assessment/nanoplot/post_qc/test4/test4_qc_NanoPlot-report.html",
+                "group_test/quality_assessment/nanoplot/post_qc/test4/test4_qc_Non_weightedHistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/post_qc/test4/test4_qc_Non_weightedLogTransformed_HistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/post_qc/test4/test4_qc_WeightedHistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/post_qc/test4/test4_qc_WeightedLogTransformed_HistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/post_qc/test4/test4_qc_Yield_By_Length.html",
+                "group_test/quality_assessment/nanoplot/raw",
+                "group_test/quality_assessment/nanoplot/raw/nanosim",
+                "group_test/quality_assessment/nanoplot/raw/nanosim/nanosim_raw_LengthvsQualityScatterPlot_dot.html",
+                "group_test/quality_assessment/nanoplot/raw/nanosim/nanosim_raw_LengthvsQualityScatterPlot_kde.html",
+                "group_test/quality_assessment/nanoplot/raw/nanosim/nanosim_raw_NanoPlot-report.html",
+                "group_test/quality_assessment/nanoplot/raw/nanosim/nanosim_raw_Non_weightedHistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/raw/nanosim/nanosim_raw_Non_weightedLogTransformed_HistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/raw/nanosim/nanosim_raw_WeightedHistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/raw/nanosim/nanosim_raw_WeightedLogTransformed_HistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/raw/nanosim/nanosim_raw_Yield_By_Length.html",
+                "group_test/quality_assessment/nanoplot/raw/test3",
+                "group_test/quality_assessment/nanoplot/raw/test3/test3_raw_LengthvsQualityScatterPlot_dot.html",
+                "group_test/quality_assessment/nanoplot/raw/test3/test3_raw_LengthvsQualityScatterPlot_kde.html",
+                "group_test/quality_assessment/nanoplot/raw/test3/test3_raw_NanoPlot-report.html",
+                "group_test/quality_assessment/nanoplot/raw/test3/test3_raw_Non_weightedHistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/raw/test3/test3_raw_Non_weightedLogTransformed_HistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/raw/test3/test3_raw_WeightedHistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/raw/test3/test3_raw_WeightedLogTransformed_HistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/raw/test3/test3_raw_Yield_By_Length.html",
+                "group_test/quality_assessment/nanoplot/raw/test4",
+                "group_test/quality_assessment/nanoplot/raw/test4/test4_raw_LengthvsQualityScatterPlot_dot.html",
+                "group_test/quality_assessment/nanoplot/raw/test4/test4_raw_LengthvsQualityScatterPlot_kde.html",
+                "group_test/quality_assessment/nanoplot/raw/test4/test4_raw_NanoPlot-report.html",
+                "group_test/quality_assessment/nanoplot/raw/test4/test4_raw_Non_weightedHistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/raw/test4/test4_raw_Non_weightedLogTransformed_HistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/raw/test4/test4_raw_WeightedHistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/raw/test4/test4_raw_WeightedLogTransformed_HistogramReadlength.html",
+                "group_test/quality_assessment/nanoplot/raw/test4/test4_raw_Yield_By_Length.html",
+                "group_test/reads",
+                "group_test/reads/post_qc",
+                "group_test/reads/post_qc/nanosim.choppered.fastq.gz",
+                "group_test/reads/post_qc/test3.choppered.fastq.gz",
+                "group_test/reads/post_qc/test4.choppered.fastq.gz",
+                "multiqc",
+                "multiqc/multiqc_data",
+                "multiqc/multiqc_data/kraken-top-n-plot_Class.txt",
+                "multiqc/multiqc_data/kraken-top-n-plot_Family.txt",
+                "multiqc/multiqc_data/kraken-top-n-plot_Genus.txt",
+                "multiqc/multiqc_data/kraken-top-n-plot_Order.txt",
+                "multiqc/multiqc_data/kraken-top-n-plot_Phylum.txt",
+                "multiqc/multiqc_data/kraken-top-n-plot_Species.txt",
+                "multiqc/multiqc_data/llms-full.txt",
+                "multiqc/multiqc_data/multiqc.log",
+                "multiqc/multiqc_data/multiqc.parquet",
+                "multiqc/multiqc_data/multiqc_citations.txt",
+                "multiqc/multiqc_data/multiqc_data.json",
+                "multiqc/multiqc_data/multiqc_kraken.txt",
+                "multiqc/multiqc_data/multiqc_nanostat.txt",
+                "multiqc/multiqc_data/multiqc_software_versions.txt",
+                "multiqc/multiqc_data/multiqc_sources.txt",
+                "multiqc/multiqc_data/nanostat_fastq_stats_table.txt",
+                "multiqc/multiqc_data/nanostat_quality_dist.txt",
+                "multiqc/multiqc_report.html",
+                "pipeline_info",
+                "pipeline_info/roshab-cli_software_mqc_versions.yml"
+            ],
+            [
+                "nanosim.bracken.report:md5,90d975eb52713ca3dd2eaa953c07c0be",
+                "nanosim.bracken.tsv:md5,910a1b7ccb76354333156651fc45cd4e",
+                "nanosim.mpa:md5,162d54a46e3fc6b51be07000b6c2e3db",
+                "test.combined.mpa:md5,0cdf11ab55914a93ca938f51e88eddb6",
+                "test3.bracken.report:md5,78aaa06a80db7d4507749831a9c2bfa8",
+                "test3.bracken.tsv:md5,73b576b20c15360f38ce648c6cc292b2",
+                "test3.mpa:md5,97493f730467d5b9c5d731ee2d1c7448",
+                "test4.bracken.report:md5,73d200c5caf274ec52c04bb8195b5206",
+                "test4.bracken.tsv:md5,579bee76dc307f91a17d3cdf58961acd",
+                "test4.mpa:md5,fc6817cf2a9dd68fca44e7ca349109f8",
+                "group_test_cyanobacteria.coverm.tsv:md5,d5652ca9cf24b16b8d8d2c1b29ed2e04",
+                "group_test_cyanotoxins_evidence.tsv:md5,e54470192b28156b09cdd01fea4dfa89",
+                "nanosim.diamond.tsv:md5,1bb486f3fdcfc7bf83125dcb463acf2e",
+                "test3.diamond.tsv:md5,f186ec69596038004d1b49c83c3c7487",
+                "test4.diamond.tsv:md5,7a271eca4dd7eb225fbc1d5f44249bc7",
+                "nanosim.kraken:md5,eafdac4eacd6dbdc74c8e3e5d887d0aa",
+                "nanosim.kraken.out:md5,9354d55fe2eaa083ffc69932cd73789e",
+                "test3.kraken:md5,99cfdec8641d8f5366d90421c9dbd090",
+                "test3.kraken.out:md5,56440fd9be0c90604ddfe18eface1817",
+                "test4.kraken:md5,e1e1677137160264138924b65061f805",
+                "test4.kraken.out:md5,21d981b4951765dbdc2646ae4dfc5d8a",
+                "kraken-top-n-plot_Class.txt:md5,5d2a2dd8e84837eff3fa938324c3d87f",
+                "kraken-top-n-plot_Family.txt:md5,87d25b28542ce50f3356f710511ddfc3",
+                "kraken-top-n-plot_Genus.txt:md5,4bf1c05e175be85e0528aa909d14e160",
+                "kraken-top-n-plot_Order.txt:md5,1fd8526d24a3d49ad27bce779e1ee5e6",
+                "kraken-top-n-plot_Phylum.txt:md5,785082941aa12e6cfaa48d95879d7871",
+                "kraken-top-n-plot_Species.txt:md5,8ff428e8b8f77c9ea454a36acbdbdfd7",
+                "multiqc_citations.txt:md5,b8373eabc0ba5c94dca2977a64e3459f",
+                "multiqc_kraken.txt:md5,8b6fe3b90ae02145ca1823ae2feebd7d",
+                "multiqc_nanostat.txt:md5,22ab5aee7cd6e19e1aafe0996e614877",
+                "nanostat_fastq_stats_table.txt:md5,1e714bc0a4eb9b8e5c98e605efeb2e24",
+                "nanostat_quality_dist.txt:md5,34ea69b3f772dd5c651fa01f0b403e52"
+            ]
+        ],
+        "timestamp": "2026-08-24T16:35:41.873446",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.4"
+        }
+    }
+}

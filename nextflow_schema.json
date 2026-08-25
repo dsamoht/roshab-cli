@@ -89,13 +89,6 @@
                     "exists": true,
                     "description": "Path to the DeepBGC models (directory or `.tar.gz` tarball). Required with `--run_deepbgc`.",
                     "fa_icon": "fas fa-database"
-                },
-                "pfam_db": {
-                    "type": "string",
-                    "format": "file-path",
-                    "exists": true,
-                    "description": "Path to `Pfam-A.hmm`. Required with `--run_bigscape`.",
-                    "fa_icon": "fas fa-file-alt"
                 }
             }
         },
@@ -110,14 +103,14 @@
                     "type": "string",
                     "format": "directory-path",
                     "description": "Directory to install the reference databases into. Setting it runs the database installation and nothing else.",
-                    "help_text": "Each database is installed into its own subdirectory: `kraken_db`, `genomes_db`, `genes_db`, `antismash_db`, `deepbgc_db` and `pfam_db`. The install run prints the parameter values to use afterwards.",
+                    "help_text": "Each database is installed into its own subdirectory: `kraken_db`, `genomes_db`, `genes_db`, `antismash_db` and `deepbgc_db`. The install run prints the parameter values to use afterwards.",
                     "fa_icon": "fas fa-folder-open"
                 },
                 "install_databases": {
                     "type": "string",
                     "default": "all",
-                    "pattern": "^(all|(kraken|genomes|genes|antismash|deepbgc|pfam)(,(kraken|genomes|genes|antismash|deepbgc|pfam))*)$",
-                    "description": "Which databases to install with `--db_dir`: `all`, or a comma-separated list of `kraken`, `genomes`, `genes`, `antismash`, `deepbgc`, `pfam`.",
+                    "pattern": "^(all|(kraken|genomes|genes|antismash|deepbgc)(,(kraken|genomes|genes|antismash|deepbgc))*)$",
+                    "description": "Which databases to install with `--db_dir`: `all`, or a comma-separated list of `kraken`, `genomes`, `genes`, `antismash`, `deepbgc`.",
                     "fa_icon": "fas fa-list-check"
                 },
                 "kraken_db_url": {
@@ -137,12 +130,6 @@
                     "type": "string",
                     "default": "https://zenodo.org/records/19522349/files/core_cyanotoxin-related_gene_mibig-v4_antismash-v8.faa",
                     "description": "Cyanotoxin gene database downloaded by `--db_dir`.",
-                    "fa_icon": "fas fa-link"
-                },
-                "pfam_db_url": {
-                    "type": "string",
-                    "default": "https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.gz",
-                    "description": "Pfam-A HMM profiles downloaded by `--db_dir`, used by BiG-SCAPE.",
                     "fa_icon": "fas fa-link"
                 }
             }
@@ -247,6 +234,23 @@
                     "maximum": 100,
                     "description": "Minimum percentage identity of the read-level `diamond blastx` alignments.",
                     "fa_icon": "fas fa-percent"
+                },
+                "diamond_min_aln_length": {
+                    "type": "integer",
+                    "default": 25,
+                    "minimum": 1,
+                    "description": "Minimum alignment length (amino acids) kept when summarising the DIAMOND hits.",
+                    "help_text": "A short alignment over a conserved NRPS/PKS domain is not diagnostic on its own: 25 aa is roughly the span of a single adenylation-domain core motif, which is shared across essentially every NRPS. Raise this once the gene database carries non-toxin ('other') sequences to calibrate against.",
+                    "fa_icon": "fas fa-ruler-horizontal"
+                },
+                "diamond_range_overlap_frac": {
+                    "type": "number",
+                    "default": 0.5,
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Overlap fraction at which two alignments on one read are treated as the same query range.",
+                    "help_text": "`--long-reads` enables range culling, so one long read yields several alignments along different segments. Alignments overlapping by at least this fraction of the shorter one compete for the same range and only the best-scoring is counted; the rest are counted as separate gene occurrences.",
+                    "fa_icon": "fas fa-arrows-alt-h"
                 }
             }
         },
@@ -320,18 +324,22 @@
                     "default": 500,
                     "minimum": 0,
                     "description": "Overlap (bp) at which two tools are considered to call the same BGC region.",
-                    "help_text": "Regions supported by at least two tools after merging are labelled `high` confidence in the per-sample `*.bgc.tsv` table.",
+                    "help_text": "Applied together with `--bgc_min_overlap_frac`. Confidence in the per-sample `*.bgc.tsv` table is weighted by method: antiSMASH plus another tool is `high`, antiSMASH alone `medium`, two or more non-antiSMASH tools `candidate`, a single non-antiSMASH tool `low`.",
                     "fa_icon": "fas fa-arrows-alt-h"
+                },
+                "bgc_min_overlap_frac": {
+                    "type": "number",
+                    "default": 0.5,
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Overlap as a fraction of the shorter interval required to merge two BGC calls.",
+                    "help_text": "Checked against each call already merged into a region rather than against the region's running extent, so one long permissive call cannot chain two distinct clusters into a single region.",
+                    "fa_icon": "fas fa-percent"
                 },
                 "run_deepbgc": {
                     "type": "boolean",
                     "description": "Add DeepBGC to the antiSMASH + GECCO screening. Requires `--deepbgc_db`.",
                     "fa_icon": "fas fa-brain"
-                },
-                "run_bigscape": {
-                    "type": "boolean",
-                    "description": "Cluster the antiSMASH regions into gene cluster families per group. Requires `--pfam_db`.",
-                    "fa_icon": "fas fa-project-diagram"
                 }
             }
         },
@@ -494,16 +502,38 @@
         }
     },
     "allOf": [
-        { "$ref": "#/$defs/input_output_options" },
-        { "$ref": "#/$defs/reference_databases" },
-        { "$ref": "#/$defs/database_installation" },
-        { "$ref": "#/$defs/workflow_options" },
-        { "$ref": "#/$defs/read_qc_options" },
-        { "$ref": "#/$defs/taxonomic_profiling_options" },
-        { "$ref": "#/$defs/read_screening_options" },
-        { "$ref": "#/$defs/assembly_options" },
-        { "$ref": "#/$defs/bgc_screening_options" },
-        { "$ref": "#/$defs/institutional_config_options" },
-        { "$ref": "#/$defs/generic_options" }
+        {
+            "$ref": "#/$defs/input_output_options"
+        },
+        {
+            "$ref": "#/$defs/reference_databases"
+        },
+        {
+            "$ref": "#/$defs/database_installation"
+        },
+        {
+            "$ref": "#/$defs/workflow_options"
+        },
+        {
+            "$ref": "#/$defs/read_qc_options"
+        },
+        {
+            "$ref": "#/$defs/taxonomic_profiling_options"
+        },
+        {
+            "$ref": "#/$defs/read_screening_options"
+        },
+        {
+            "$ref": "#/$defs/assembly_options"
+        },
+        {
+            "$ref": "#/$defs/bgc_screening_options"
+        },
+        {
+            "$ref": "#/$defs/institutional_config_options"
+        },
+        {
+            "$ref": "#/$defs/generic_options"
+        }
     ]
 }

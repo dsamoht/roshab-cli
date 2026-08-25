@@ -79,11 +79,31 @@ reference genome set given with `--genomes_db`.
 
 - `group_<group>/diamond/`
   - `*.diamond.tsv`: tabular `diamond blastx` alignments of the QC reads against the cyanotoxin gene database.
+  - `group_<group>_cyanotoxins_evidence.tsv`: per gene, the number of alignment ranges and reads, and how many of those reads carry more than one gene of the same toxin.
 
 </details>
 
 Produced with `--mode reads` (the default) or `--mode both`. Alignments are
-filtered at `--diamond_blastx_id` percent identity.
+filtered at `--diamond_blastx_id` percent identity and `--diamond_min_aln_length`
+amino acids.
+
+`--long-reads` puts DIAMOND in range-culling mode, so one long read yields
+several alignments along different segments. Those alignments are resolved into
+non-overlapping query ranges — two alignments overlapping by at least
+`--diamond_range_overlap_frac` of the shorter one compete for the same range and
+only the best-scoring one is kept — and it is **ranges, not reads**, that are
+counted. A read spanning `mcyA`, `mcyB` and `mcyC` therefore contributes to all
+three genes rather than to one.
+
+The evidence table also records co-location: `n_multigene_reads` and
+`max_genes_on_one_read` count reads carrying more than one gene of the same
+toxin, and `example_gene_order` shows the observed order and orientation
+(`mcyB(+)>mcyC(+)`). Several genes of one cluster on a single molecule is much
+stronger evidence than the same number of unlinked hits, because a conserved
+NRPS domain can match one gene by chance but not several in sequence. Gene order
+is reported rather than scored: *mcy* cluster architecture differs between
+*Microcystis*, *Planktothrix* and *Anabaena*, so only strand consistency is
+evaluated.
 
 ### Assembly
 
@@ -107,7 +127,7 @@ one per group with `--coassemble_by_group`.
 <summary>Output files</summary>
 
 - `group_<group>/bgc/`
-  - `*.bgc.tsv`: the antiSMASH, GECCO and DeepBGC calls of a sample reconciled into one table. Regions supported by at least two tools are labelled `high` confidence.
+  - `*.bgc.tsv`: the antiSMASH, GECCO and DeepBGC calls of a sample reconciled into one table, with the per-tool coordinates of each merged region in `component_intervals`.
   - `*_bgc_summary.tsv`: per-group summary of the merged calls.
 - `group_<group>/bgc/antismash/`
   - `<sample_id>_antismash/`: the complete antiSMASH output directory.
@@ -115,15 +135,29 @@ one per group with `--coassemble_by_group`.
   - `<sample_id>_gecco/`: the complete GECCO output directory.
 - `group_<group>/bgc/deepbgc/`
   - `*.deepbgc.tsv`: DeepBGC calls, with `--run_deepbgc`.
-- `group_<group>/bgc/bigscape/`
-  - `group_<group>_bigscape/`: gene cluster families, with `--run_bigscape`.
 - `group_<group>/diamond_contigs/`
   - `*.diamond.tsv`: tabular `diamond blastp` alignments of the predicted proteins against the cyanotoxin gene database.
+  - `group_<group>_contigs_cyanotoxins_evidence.tsv`: the contig-level counterpart of the read-level evidence table.
 
 </details>
 
 Two calls are treated as the same region when they overlap by at least
-`--bgc_min_overlap` bases.
+`--bgc_min_overlap` bases **and** by `--bgc_min_overlap_frac` of the shorter of
+the two. The fraction is checked against each call already merged into the
+region rather than against the region's running extent, so one long permissive
+call cannot chain two distinct clusters into a single region.
+
+Confidence is weighted by method rather than counted, because GECCO and DeepBGC
+are both machine-learning models trained on overlapping MIBiG data and their
+agreement is not independent evidence:
+
+| `confidence` | Support                                    |
+| ------------ | ------------------------------------------ |
+| `high`       | antiSMASH and at least one other tool      |
+| `medium`     | antiSMASH only                             |
+| `candidate`  | two or more tools, none of them antiSMASH  |
+| `low`        | a single non-antiSMASH tool                |
+| `single-tool`| only one detector ran at all               |
 
 ### Figures
 
@@ -133,7 +167,7 @@ Two calls are treated as the same region when they overlap by at least
 - `group_<group>/figures/`
   - `*_kraken_cyano_barplots.pdf`: cyanobacterial composition over the samples of the group.
   - `*_coverm_genome_coverage_barplots.pdf`: per-genome coverage over the samples of the group.
-  - `*_cyanotoxins_heatmap.pdf`: read-level cyanotoxin gene heatmap.
+  - `*_cyanotoxins_heatmap.pdf`: read-level cyanotoxin gene heatmap. Every gene of the database is drawn for every sample, so a gene or a sample with no hit shows as an explicit zero.
   - `*_contigs_cyanotoxins_heatmap.pdf`: contig-level cyanotoxin gene heatmap.
   - `*_bgc_overview.pdf`: overview of the merged BGC calls.
 

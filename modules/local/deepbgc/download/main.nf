@@ -12,8 +12,6 @@ process DEEPBGC_DOWNLOAD {
     input:
     val ready // ordering token only - nothing is read from it
 
-    // No `versions` topic: `storeDir` only accepts `val` and `path` outputs, and
-    // nothing collects software versions on a database installation run anyway
     output:
     path "deepbgc_db", emit: db
 

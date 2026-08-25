@@ -16,8 +16,17 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-CONFIDENCE_ORDER = ['high', 'low', 'single-tool']
-CONFIDENCE_COLORS = {'high': '#225ea8', 'low': '#7fcdbb', 'single-tool': '#c7e9b4'}
+# Must stay in step with `classify()` in merge_bgc_calls.py: `by_confidence` is
+# sliced by this list, so a tier missing here vanishes from the figure silently.
+CONFIDENCE_ORDER = ['high', 'medium', 'candidate', 'low', 'single-tool']
+CONFIDENCE_COLORS = {
+    'high': '#0c2c84',        # antiSMASH + at least one other tool
+    'medium': '#225ea8',      # antiSMASH only
+    'candidate': '#41b6c4',   # two or more non-antiSMASH tools
+    'low': '#a1dab4',         # a single non-antiSMASH tool
+    'single-tool': '#bdbdbd',  # only one detector ran: nothing to corroborate with
+}
+ANTISMASH_BACKED = ['high', 'medium']
 
 
 def parse_args():
@@ -79,8 +88,15 @@ def main():
             .size()
             .reset_index(name='n_high_confidence'))
 
+    backed = (exploded[exploded['confidence'].isin(ANTISMASH_BACKED)]
+              .groupby(['sample', 'product'])
+              .size()
+              .reset_index(name='n_antismash_supported'))
+
     summary = counts.merge(high, on=['sample', 'product'], how='left')
+    summary = summary.merge(backed, on=['sample', 'product'], how='left')
     summary['n_high_confidence'] = summary['n_high_confidence'].fillna(0).astype(int)
+    summary['n_antismash_supported'] = summary['n_antismash_supported'].fillna(0).astype(int)
     summary = summary.sort_values(['sample', 'n_regions'], ascending=[True, False])
     summary.to_csv(args.summary, sep='\t', index=False)
     print(f"Successfully generated {args.summary}")

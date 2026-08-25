@@ -26,21 +26,13 @@ workflow DB_INSTALL {
         log.info("Already present, skipping: ${already_installed.join(', ')}\n")
     }
 
-    // The antiSMASH databases ship a full Pfam release of their own, and it is
-    // hmmpress-ed - which is what BiG-SCAPE wants. Installing both, don't pull a
-    // second copy of Pfam: `--pfam_db` points into `antismash_db` instead.
-    def reuse_antismash_pfam = 'pfam' in requested && 'antismash' in requested
-    if (reuse_antismash_pfam) {
-        log.info("Pfam comes with the antiSMASH databases - not downloading it a second time\n")
-    }
-
     //
     // MODULE: Databases that are a single download - Nextflow stages the remote
     // file and `INSTALL_DB` unpacks it into `<db_dir>/<name>/`
     //
     ch_downloads = channel.fromList(
         requested
-            .findAll { name -> catalogue[name].url && !(reuse_antismash_pfam && name == 'pfam') }
+            .findAll { name -> catalogue[name].url }
             .collect { name -> tuple(catalogue[name].dir, file(catalogue[name].url, checkIfExists: true)) }
     )
 
@@ -93,7 +85,6 @@ def databaseCatalogue() {
         genes: [dir: 'genes_db', param: 'genes_db', url: params.genes_db_url, file: true],
         antismash: [dir: 'antismash_db', param: 'antismash_db', url: null],
         deepbgc: [dir: 'deepbgc_db', param: 'deepbgc_db', url: null],
-        pfam: [dir: 'pfam_db', param: 'pfam_db', url: params.pfam_db_url, file: true],
     ]
 }
 
@@ -135,15 +126,6 @@ def installedPath(name) {
 
     if (!entry.file) {
         return db_path
-    }
-
-    // Pfam is not downloaded separately when the antiSMASH databases, which
-    // carry their own release of it, are installed as well
-    if (name == 'pfam' && !file(db_path).exists()) {
-        def antismash_pfam = files("${file(params.db_dir)}/antismash_db/pfam/*/Pfam-A.hmm")
-        if (antismash_pfam) {
-            return antismash_pfam.sort().last()
-        }
     }
 
     // `INSTALL_DB` keeps the name of the downloaded file, minus the `.gz` suffix
