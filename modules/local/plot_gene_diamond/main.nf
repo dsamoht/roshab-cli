@@ -13,6 +13,8 @@ process PLOT_GENE_DIAMOND {
     output:
     tuple val(group_id), path("*_heatmap.pdf"), emit: pdf, optional: true
     tuple val(group_id), path("*_evidence.tsv"), emit: tsv, optional: true
+    tuple val(group_id), path("*_multigene_reads.pdf"), emit: multigene_pdf, optional: true
+    tuple val(group_id), path("*_multigene_reads.tsv"), emit: multigene_tsv, optional: true
     tuple val("${task.process}"), val('python'), eval("python --version | sed 's/^Python //'"), topic: versions
 
     when:
@@ -29,7 +31,9 @@ process PLOT_GENE_DIAMOND {
         --input ${diamond_tsvs} \\
         --genes-db ${genes_db} \\
         --output ${prefix}_heatmap.pdf \\
-        --evidence ${prefix}_evidence.tsv
+        --evidence ${prefix}_evidence.tsv \\
+        --multigene-output ${prefix}_multigene_reads.pdf \\
+        --multigene-reads ${prefix}_multigene_reads.tsv
     """
 
     stub:
@@ -37,5 +41,7 @@ process PLOT_GENE_DIAMOND {
     """
     touch ${prefix}_heatmap.pdf
     touch ${prefix}_evidence.tsv
+    touch ${prefix}_multigene_reads.pdf
+    touch ${prefix}_multigene_reads.tsv
     """
 }

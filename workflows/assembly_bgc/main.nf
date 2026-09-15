@@ -5,30 +5,25 @@
 include { ANTISMASH                       } from '../../modules/local/antismash'
 include { CAT_READS as CAT_COASSEMBLY     } from '../../modules/local/cat'
 include { DECOMPRESS as PREP_ANTISMASH_DB } from '../../modules/local/decompress'
-include { DECOMPRESS as PREP_DEEPBGC_DB   } from '../../modules/local/decompress'
-include { DEEPBGC                         } from '../../modules/local/deepbgc'
-include { DIAMOND_BLASTP                  } from '../../modules/local/diamond/blastp'
 include { FLYE                            } from '../../modules/local/flye'
-include { GECCO                           } from '../../modules/local/gecco'
-include { MERGE_BGC                       } from '../../modules/local/merge_bgc'
 include { METAMDBG                        } from '../../modules/local/metamdbg'
 include { PLOT_BGC                        } from '../../modules/local/plot_bgc'
-include { PLOT_GENE_DIAMOND as PLOT_GENE_DIAMOND_CONTIGS } from '../../modules/local/plot_gene_diamond'
-include { PYRODIGAL                       } from '../../modules/local/pyrodigal'
 include { SEQKIT_SEQ                      } from '../../modules/local/seqkit/seq'
 include { SEQKIT_STATS                    } from '../../modules/local/seqkit/stats'
+
+include { databasePath                     } from '../../subworkflows/local/pipeline_initialisation'
 
 workflow ASSEMBLY_BGC {
 
     take:
     ch_qc_reads // channel: [ val(meta), path(reads) ]
-    ch_genes_db // value channel: path(genes_db)
 
     main:
 
-    // antiSMASH databases: directory or tarball, same handling as the other DBs
+    // antiSMASH databases: `--db_dir/antismash_db` unless `--antismash_db` names
+    // another one; directory or tarball, same handling as the other DBs
     ch_antismash_db = PREP_ANTISMASH_DB(
-        channel.fromPath(params.antismash_db, checkIfExists: true),
+        channel.fromPath(databasePath(params.antismash_db, 'antismash_db')),
         'antismash_db',
     ).db.first()
 
@@ -68,56 +63,38 @@ workflow ASSEMBLY_BGC {
     // Drop short contigs before screening, then report assembly metrics
     //
     SEQKIT_SEQ(ch_raw_contigs)
-    ch_contigs = SEQKIT_SEQ.out.contigs
 
-    SEQKIT_STATS(ch_contigs)
+    // Assembly metrics are worth having even for a sample that assembled nothing:
+    // an empty row is the evidence that it was tried and came up empty.
+    SEQKIT_STATS(SEQKIT_SEQ.out.contigs)
+
+    // A sample too shallow to assemble a single contig above `--min_contig_length`
+    // leaves an empty FASTA. There is nothing to screen in it, and handing an empty
+    // assembly to antiSMASH risks failing the whole run over it, so drop those here
+    // and name them in the log: the rest of the batch still finishes. Such a sample
+    // is MISSING, not negative -- it carries no contig-level evidence either way --
+    // so exclude it when scoring the read-level route against these calls rather
+    // than counting it as "no BGCs".
+    ch_contigs = SEQKIT_SEQ.out.contigs.filter { meta, contigs ->
+        def has_contigs = contigs.size() > 0
+        if (!has_contigs) {
+            log.warn("${meta.id}: no contigs >= ${params.min_contig_length} bp, skipping contig-level screening")
+        }
+        return has_contigs
+    }
 
     //
-    // Call proteins and screen them against the cyanotoxin gene database: the
-    // contig-level counterpart of the read-level `diamond blastx` route
-    //
-    PYRODIGAL(ch_contigs)
-    DIAMOND_BLASTP(PYRODIGAL.out.faa, ch_genes_db)
-
-    //
-    // BGC detection: rule-based (antiSMASH) + CRF (GECCO) + optional deep
-    // learning (DeepBGC)
+    // BGC detection: rule-based, with antiSMASH's own region boundaries taken as
+    // the result. `PLOT_BGC` reads these JSON reports directly; a sample with no
+    // regions still has a report, it simply contributes no rows to the figure.
     //
     ANTISMASH(ch_contigs, ch_antismash_db)
-    GECCO(ch_contigs)
-
-    if (params.run_deepbgc) {
-        ch_deepbgc_db = PREP_DEEPBGC_DB(
-            channel.fromPath(params.deepbgc_db, checkIfExists: true),
-            'deepbgc_db',
-        ).db.first()
-
-        DEEPBGC(ch_contigs, ch_deepbgc_db)
-        ch_deepbgc_tsv = DEEPBGC.out.tsv
-    }
-    else {
-        ch_deepbgc_tsv = channel.empty()
-    }
 
     //
-    // Reconcile the per-tool calls; the contigs channel is the spine so that
-    // samples without any BGC hit still get an (empty) report
+    // Group-level figure: one heatmap of regions per product class over the group
     //
-    ch_merge_in = ch_contigs
-        .join(ANTISMASH.out.json, remainder: true)
-        .join(GECCO.out.clusters, remainder: true)
-        .join(ch_deepbgc_tsv, remainder: true)
-        .map { meta, _contigs, antismash_json, gecco_tsv, deepbgc_tsv ->
-            return [meta, antismash_json ?: [], gecco_tsv ?: [], deepbgc_tsv ?: []]
-        }
-
-    MERGE_BGC(ch_merge_in)
-
-    //
-    // Group-level figures, mirroring the read-level outputs
-    //
-    ch_bgc_by_group = MERGE_BGC.out.tsv
-        .map { meta, tsv -> tuple(meta.group, [meta, tsv]) }
+    ch_bgc_by_group = ANTISMASH.out.json
+        .map { meta, json -> tuple(meta.group, [meta, json]) }
         .groupTuple()
         .map { group_id, metadata_and_file ->
             def sorted_items = metadata_and_file.sort { entry -> entry[0].id }
@@ -126,27 +103,10 @@ workflow ASSEMBLY_BGC {
 
     PLOT_BGC(ch_bgc_by_group)
 
-    ch_blastp_by_group = DIAMOND_BLASTP.out.tsv
-        .map { meta, tsv -> tuple(meta.group, [meta, tsv]) }
-        .groupTuple()
-        .map { group_id, metadata_and_file ->
-            def sorted_items = metadata_and_file.sort { entry -> entry[0].id }
-            return tuple(group_id, sorted_items.collect { entry -> entry[1] })
-        }
-
-    PLOT_GENE_DIAMOND_CONTIGS(ch_blastp_by_group, ch_genes_db)
-
     emit:
     contigs           = ch_contigs                          // channel: [ val(meta), path(fasta) ]
     assembly_stats    = SEQKIT_STATS.out.tsv                // channel: [ val(meta), path(tsv) ]
-    proteins          = PYRODIGAL.out.faa                   // channel: [ val(meta), path(faa) ]
-    blastp_tsv        = DIAMOND_BLASTP.out.tsv              // channel: [ val(meta), path(tsv) ]
-    blastp_plot       = PLOT_GENE_DIAMOND_CONTIGS.out.pdf   // channel: [ val(group_id), path(pdf) ]
-    blastp_evidence   = PLOT_GENE_DIAMOND_CONTIGS.out.tsv   // channel: [ val(group_id), path(tsv) ]
     antismash_results = ANTISMASH.out.results               // channel: [ val(meta), path(dir) ]
-    gecco_results     = GECCO.out.results                   // channel: [ val(meta), path(dir) ]
-    deepbgc_tsv       = ch_deepbgc_tsv                      // channel: [ val(meta), path(tsv) ]
-    bgc_tsv           = MERGE_BGC.out.tsv                   // channel: [ val(meta), path(tsv) ]
     bgc_plot          = PLOT_BGC.out.pdf                    // channel: [ val(group_id), path(pdf) ]
     bgc_summary       = PLOT_BGC.out.tsv                    // channel: [ val(group_id), path(tsv) ]
 }

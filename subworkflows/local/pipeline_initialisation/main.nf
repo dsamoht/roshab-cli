@@ -67,7 +67,7 @@ workflow PIPELINE_INITIALISATION {
         after_text = after_text.replaceAll(/\033\[[0-9;]*m/, '')
     }
 
-    def command = "nextflow run ${workflow.manifest.name} -profile <docker/singularity/.../institute> --input samplesheet.csv --outdir <OUTDIR> --kraken_db <PATH> --genomes_db <PATH> --genes_db <PATH>"
+    def command = "nextflow run ${workflow.manifest.name} -profile <docker/singularity/.../institute> --input samplesheet.csv --outdir <OUTDIR> --db_dir <PATH>"
 
     // The last argument is `cli_typecast`: `null` leaves it to nf-schema, which
     // casts command line values to the type in the schema whenever the strict
@@ -128,19 +128,44 @@ def validateInputParameters() {
     if (!params.outdir) {
         error("`--outdir` is required: it is the only directory results are ever written to.")
     }
+    // Resolve every reference database up front, so a missing one is reported
+    // before any process starts rather than by the first task that needs it.
+    databasePath(params.kraken_db, 'kraken_db')
+    databasePath(params.genomes_db, 'genomes_db')
+
     if (params.mode in ['assembly', 'both']) {
-        if (!params.antismash_db) {
-            error("`--antismash_db` is required by `--mode ${params.mode}`. Build the databases with `download-antismash-databases`.")
-        }
-        if (params.run_deepbgc && !params.deepbgc_db) {
-            error("`--run_deepbgc` requires `--deepbgc_db`.")
-        }
+        databasePath(params.antismash_db, 'antismash_db')
     }
-    else {
-        if (params.run_deepbgc || params.coassemble_by_group) {
-            log.warn("`--run_deepbgc` and `--coassemble_by_group` only apply to the assembly route and are ignored with `--mode ${params.mode}`.")
-        }
+    else if (params.coassemble_by_group) {
+        log.warn("`--coassemble_by_group` only applies to the assembly route and is ignored with `--mode ${params.mode}`.")
     }
+}
+
+//
+// Locate a reference database. `--db_dir` is the one flag a run normally needs:
+// every database lives in the subdirectory of it that `--install_databases`
+// created. `--kraken_db`, `--genomes_db` and `--antismash_db` override a single
+// entry, for a database that is already somewhere else.
+//
+def databasePath(explicit, name) {
+    if (explicit) {
+        return file(explicit, checkIfExists: true)
+    }
+
+    // The antiSMASH databases are only installed when the mode asks for them, so
+    // the command that would fix a missing one has to carry the mode through.
+    def mode_arg = name == 'antismash_db' ? " --mode ${params.mode}" : ''
+    def install = "nextflow run ${workflow.manifest.name} -profile <docker/singularity> --install_databases${mode_arg} --db_dir"
+
+    if (!params.db_dir) {
+        error("No ${name}. Point `--db_dir` at a directory holding the reference databases, or install them there first:\n\n    ${install} <PATH>\n")
+    }
+
+    def path = file("${params.db_dir}/${name}")
+    if (!path.exists()) {
+        error("`--db_dir` (${params.db_dir}) has no `${name}/`. Install it with:\n\n    ${install} ${params.db_dir}\n")
+    }
+    return path
 }
 
 //
@@ -158,10 +183,7 @@ def toolCitationText() {
         "CoverM (Woodcroft and Newell),",
         params.mode in ['reads', 'both'] ? "DIAMOND (Buchfink et al. 2021)," : "",
         params.mode in ['assembly', 'both'] ? (params.assembler == 'metamdbg' ? "metaMDBG (Benoit et al. 2024)," : "metaFlye (Kolmogorov et al. 2020),") : "",
-        params.mode in ['assembly', 'both'] ? "Pyrodigal (Larralde 2022)," : "",
         params.mode in ['assembly', 'both'] ? "antiSMASH (Blin et al. 2023)," : "",
-        params.mode in ['assembly', 'both'] ? "GECCO (Carroll et al. 2021)," : "",
-        params.mode in ['assembly', 'both'] && params.run_deepbgc ? "DeepBGC (Hannigan et al. 2019)," : "",
         "MultiQC (Ewels et al. 2016)",
         ".",
     ]
@@ -180,10 +202,7 @@ def toolBibliographyText() {
         params.mode in ['reads', 'both'] ? "<li>Buchfink B, Reuter K, Drost HG. Sensitive protein alignments at tree-of-life scale using DIAMOND. Nat Methods. 2021;18(4):366-368. doi: 10.1038/s41592-021-01101-x</li>" : "",
         params.mode in ['assembly', 'both'] && params.assembler == 'metamdbg' ? "<li>Benoit G, Raguideau S, James R, Phillippy AM, Chikhi R, Quince C. High-quality metagenome assembly from long accurate reads with metaMDBG. Nat Biotechnol. 2024;42(9):1378-1383. doi: 10.1038/s41587-023-01983-6</li>" : "",
         params.mode in ['assembly', 'both'] && params.assembler == 'flye' ? "<li>Kolmogorov M, Bickhart DM, Behsaz B, et al. metaFlye: scalable long-read metagenome assembly using repeat graphs. Nat Methods. 2020;17(11):1103-1110. doi: 10.1038/s41592-020-00971-x</li>" : "",
-        params.mode in ['assembly', 'both'] ? "<li>Larralde M. Pyrodigal: Python bindings and interface to Prodigal. J Open Source Softw. 2022;7(72):4296. doi: 10.21105/joss.04296</li>" : "",
         params.mode in ['assembly', 'both'] ? "<li>Blin K, Shaw S, Augustijn HE, et al. antiSMASH 7.0: new and improved predictions. Nucleic Acids Res. 2023;51(W1):W46-W50. doi: 10.1093/nar/gkad344</li>" : "",
-        params.mode in ['assembly', 'both'] ? "<li>Carroll LM, Larralde M, Fleck JS, et al. Accurate de novo identification of biosynthetic gene clusters with GECCO. bioRxiv. 2021. doi: 10.1101/2021.05.03.442509</li>" : "",
-        params.mode in ['assembly', 'both'] && params.run_deepbgc ? "<li>Hannigan GD, Prihoda D, Palicka A, et al. A deep learning genome-mining strategy for biosynthetic gene cluster prediction. Nucleic Acids Res. 2019;47(18):e110. doi: 10.1093/nar/gkz654</li>" : "",
         "<li>Ewels P, Magnusson M, Lundin S, Kaller M. MultiQC: summarize analysis results for multiple tools and samples in a single report. Bioinformatics. 2016;32(19):3047-3048. doi: 10.1093/bioinformatics/btw354</li>",
     ]
     return references.findAll { entry -> entry }.join(' ').trim()
