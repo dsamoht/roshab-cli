@@ -20,8 +20,6 @@ process KRAKENTOOLS_KREPORT2MPA {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
-    // `kreport2mpa.py` names the MPA rows after the input file, so stage the
-    // report under the sample name before converting.
     """
     cp ${report} ${prefix}
     kreport2mpa.py \\

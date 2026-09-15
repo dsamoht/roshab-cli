@@ -8,9 +8,6 @@ process SPLIT_KRAKEN_OUTPUT {
         : 'nf-core/ubuntu:22.04'}"
 
     input:
-    // Staged in a subdirectory: the per-sample outputs land in the task directory
-    // under names that Kraken2 derived from the same sample set, so an input file
-    // sitting next to them could shadow one of the outputs
     tuple val(meta), path(kraken_output, stageAs: 'input/*')
 
     output:
@@ -20,12 +17,6 @@ process SPLIT_KRAKEN_OUTPUT {
     task.ext.when == null || task.ext.when
 
     script:
-    // All the samples are classified in a single Kraken2 run, so `CAT_READS` stamped
-    // every read ID with `<sample>_`. Split the classification output back out into
-    // one file per sample by matching that stamp against the known sample names:
-    // splitting the read ID on "_" would truncate any sample name that contains one.
-    // The longest match wins, so a sample name that is a prefix of another one still
-    // sends its reads to the right file.
     def sample_ids = meta.samples ?: [meta.id]
     """
     awk -v samples='${sample_ids.join(' ')}' '
@@ -44,11 +35,14 @@ process SPLIT_KRAKEN_OUTPUT {
             print >> (match_id ".kraken.out")
         }
     ' ${kraken_output}
+
+    # sort on the read ID to make this published output reproducible.
+    for split_file in *.kraken.out; do
+        LC_ALL=C sort -k2,2 "\${split_file}" -o "\${split_file}"
+    done
     """
 
     stub:
-    // `meta.samples` lists the samples that went into the combined run: the stub
-    // cannot recover them from the (empty) upstream stub output
     def sample_ids = meta.samples ?: [meta.id]
     """
     touch ${sample_ids.collect { id -> "${id}.kraken.out" }.join(' ')}

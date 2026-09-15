@@ -16,3 +16,6 @@ apptainer_cache/
 tests/roshab-cli_out/
 CLAUDE.md
 tests/db_dir
+*.dmnd
+.mibig_cache/
+validation/

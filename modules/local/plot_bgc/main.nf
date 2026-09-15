@@ -4,10 +4,10 @@ process PLOT_BGC {
     label 'error_ignore'
 
     conda "${moduleDir}/environment.yml"
-    container "docker.io/dsamoht/bio-utils:latest"
+    container "docker.io/dsamoht/bio-utils@sha256:f0cad0d32d8d8fac7bb971736f158200cf19b4817dd796bd9d76240a054bacf2"
 
     input:
-    tuple val(group_id), path(bgc_tsvs)
+    tuple val(group_id), path(antismash_jsons)
 
     output:
     tuple val(group_id), path("*_bgc_overview.pdf"), emit: pdf, optional: true
@@ -25,7 +25,7 @@ process PLOT_BGC {
 
     plot_bgc.py \\
         ${args} \\
-        --input ${bgc_tsvs} \\
+        --input ${antismash_jsons} \\
         --output ${prefix}_bgc_overview.pdf \\
         --summary ${prefix}_bgc_summary.tsv
     """

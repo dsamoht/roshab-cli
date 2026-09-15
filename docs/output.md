@@ -79,11 +79,41 @@ reference genome set given with `--genomes_db`.
 
 - `group_<group>/diamond/`
   - `*.diamond.tsv`: tabular `diamond blastx` alignments of the QC reads against the cyanotoxin gene database.
+  - `group_<group>_cyanotoxins_evidence.tsv`: per gene, the number of alignment ranges and reads, and how many of those reads carry more than one gene of the same toxin.
+  - `group_<group>_cyanotoxins_multigene_reads.tsv`: one row per read carrying more than one gene of the same toxin, with the gene count and the observed order and orientation.
 
 </details>
 
 Produced with `--mode reads` (the default) or `--mode both`. Alignments are
-filtered at `--diamond_blastx_id` percent identity.
+filtered at `--diamond_blastx_id` percent identity and `--diamond_min_aln_length`
+amino acids.
+
+`--long-reads` puts DIAMOND in range-culling mode, so one long read yields
+several alignments along different segments. Those alignments are resolved into
+non-overlapping query ranges — two alignments overlapping by at least
+`--diamond_range_overlap_frac` of the shorter one compete for the same range and
+only the best-scoring one is kept — and it is **ranges, not reads**, that are
+counted. A read spanning `mcyA`, `mcyB` and `mcyC` therefore contributes to all
+three genes rather than to one.
+
+The evidence table also records co-location: `n_multigene_reads` and
+`max_genes_on_one_read` count reads carrying more than one gene of the same
+toxin, and `example_gene_order` shows the observed order and orientation
+(`mcyB(+)>mcyC(+)`). Several genes of one cluster on a single molecule is much
+stronger evidence than the same number of unlinked hits, because a conserved
+NRPS domain can match one gene by chance but not several in sequence. Gene order
+is reported rather than scored: _mcy_ cluster architecture differs between
+_Microcystis_, _Planktothrix_ and _Anabaena_, so only strand consistency is
+evaluated.
+
+Because the evidence table counts a multi-gene read once per gene it carries,
+it cannot answer "how many distinct reads" without double counting.
+`group_<group>_cyanotoxins_multigene_reads.tsv` lists those reads individually
+instead, and `*_multigene_reads.pdf` (see [Figures](#figures)) plots the count
+per sample and toxin. The figure only draws `class: toxin` entries of the gene
+database -- the same restriction the heatmap applies -- since co-location on
+an 'other' compound such as an anabaenopeptin or a cyanopeptolin is not
+evidence of cyanotoxin biosynthesis; those hits stay in the TSV.
 
 ### Assembly
 
@@ -93,8 +123,6 @@ filtered at `--diamond_blastx_id` percent identity.
 - `group_<group>/assembly/`
   - `*.fasta`: contigs, filtered to `--min_contig_length`.
   - `*.assembly_stats.tsv`: SeqKit assembly metrics.
-- `group_<group>/assembly/proteins/`
-  - `*.faa`: proteins predicted with Pyrodigal.
 
 </details>
 
@@ -107,23 +135,23 @@ one per group with `--coassemble_by_group`.
 <summary>Output files</summary>
 
 - `group_<group>/bgc/`
-  - `*.bgc.tsv`: the antiSMASH, GECCO and DeepBGC calls of a sample reconciled into one table. Regions supported by at least two tools are labelled `high` confidence.
-  - `*_bgc_summary.tsv`: per-group summary of the merged calls.
+  - `*_bgc_summary.tsv`: number of predicted regions per product class, one row per sample and product class of the group.
 - `group_<group>/bgc/antismash/`
-  - `<sample_id>_antismash/`: the complete antiSMASH output directory.
-- `group_<group>/bgc/gecco/`
-  - `<sample_id>_gecco/`: the complete GECCO output directory.
-- `group_<group>/bgc/deepbgc/`
-  - `*.deepbgc.tsv`: DeepBGC calls, with `--run_deepbgc`.
-- `group_<group>/bgc/bigscape/`
-  - `group_<group>_bigscape/`: gene cluster families, with `--run_bigscape`.
-- `group_<group>/diamond_contigs/`
-  - `*.diamond.tsv`: tabular `diamond blastp` alignments of the predicted proteins against the cyanotoxin gene database.
+  - `<sample_id>_antismash/`: the complete antiSMASH output directory, including the per-region GenBank files (which carry the translated CDS of each region) and the HTML report.
 
 </details>
 
-Two calls are treated as the same region when they overlap by at least
-`--bgc_min_overlap` bases.
+antiSMASH is the only BGC caller, and its own region boundaries are taken as
+the result: the group summary counts the regions of each JSON report rather
+than re-deriving them. A region carrying several product classes (`nrps,t1pks`)
+is counted once under each.
+
+A sample contributes rows only for the regions it has, so one with no regions at
+all is absent from the summary and the heatmap rather than present as a zero. Two
+different situations look identical there: antiSMASH ran and found nothing, or the
+sample assembled no contig above `--min_contig_length` and was never screened. The
+second is a missing result, not a negative one. `assembly_stats` distinguishes
+them, and the run log names every skipped sample.
 
 ### Figures
 
@@ -133,12 +161,16 @@ Two calls are treated as the same region when they overlap by at least
 - `group_<group>/figures/`
   - `*_kraken_cyano_barplots.pdf`: cyanobacterial composition over the samples of the group.
   - `*_coverm_genome_coverage_barplots.pdf`: per-genome coverage over the samples of the group.
-  - `*_cyanotoxins_heatmap.pdf`: read-level cyanotoxin gene heatmap.
-  - `*_contigs_cyanotoxins_heatmap.pdf`: contig-level cyanotoxin gene heatmap.
-  - `*_bgc_overview.pdf`: overview of the merged BGC calls.
+  - `*_cyanotoxins_heatmap.pdf`: read-level cyanotoxin gene heatmap. Every gene of the database is drawn for every sample, so a gene or a sample with no hit shows as an explicit zero.
+  - `*_cyanotoxins_multigene_reads.pdf`: reads carrying more than one gene of the same toxin, counted per sample and toxin -- the strongest read-level evidence of a biosynthesis gene cluster.
+  - `*_bgc_overview.pdf`: heatmap of predicted regions per product class over the samples of the group. Every screened sample is drawn, so one with no predicted region shows as a row of zeros.
+
+A figure is never allowed to fail the run. When a group has nothing to draw -- an
+index without the clades of interest, no read mapping to the genome database --
+the PDF carries a page saying so instead of a blank chart, and the reason is in
+the task log.
 
 </details>
-
 
 ### MultiQC
 

@@ -28,10 +28,6 @@ process METAMDBG {
         --in-ont ${reads} \\
         --threads ${task.cpus}
 
-    # metaMDBG writes an internally polished assembly. `contigs.fasta.gz` is the
-    # final output of the 1.x releases (`contigs_polished.fasta.gz` is an
-    # intermediate there, but was the final name in earlier releases), so keep
-    # that order and take the first one that exists.
     CONTIGS=""
     for candidate in metamdbg_out/contigs.fasta.gz \\
                      metamdbg_out/contigs_polished.fasta.gz \\

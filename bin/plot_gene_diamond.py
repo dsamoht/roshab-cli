@@ -1,122 +1,365 @@
 #!/usr/bin/env python3
+"""Summarise DIAMOND alignments against the cyanotoxin gene database.
+
+`diamond blastx --long-reads` enables range culling, which reports several
+alignments along different segments of one long read. Collapsing a read to its
+single best hit therefore throws away exactly what long reads provide: a 30 kb
+read spanning mcyA-mcyB-mcyC would be counted as one gene. This script keeps
+every HSP, resolves them into non-overlapping query ranges (the per-range best
+hit that range culling intends), and counts ranges rather than reads.
+
+It also records gene co-location: how many distinct genes of the same toxin sit
+on a single molecule, and in what order and orientation. Co-location is the
+strongest read-level evidence available, because a conserved NRPS domain can hit
+one toxin gene by chance but several genes of the same cluster on one read
+cannot.
+
+Note on ordering: gene order is reported, not scored. mcy cluster architecture
+differs between Microcystis (bidirectional mcyABC / mcyDEFGHIJ), Planktothrix
+and Anabaena, so requiring a reference order would reject true positives from
+the genera that differ. Only strand consistency is evaluated.
+"""
 
 import argparse
 import math
 import os
+import sys
+from collections import defaultdict
 
+import matplotlib
+matplotlib.use('Agg')
+
+import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
+
+
+# DIAMOND writes human-readable field descriptions on its `# Fields:` line
+# (`--header` is set in the module). Map them back to the short codes so the
+# column order of `--outfmt` can change without silently shifting every value.
+FIELD_DESCRIPTIONS = {
+    'Query Seq - id': 'qseqid',
+    'Subject Seq - id': 'sseqid',
+    'Percentage of identical matches': 'pident',
+    'Alignment length': 'length',
+    'Number of mismatches': 'mismatch',
+    'Number of gap openings': 'gapopen',
+    'Start of alignment in query': 'qstart',
+    'End of alignment in query': 'qend',
+    'Start of alignment in subject': 'sstart',
+    'End of alignment in subject': 'send',
+    'Expect value': 'evalue',
+    'Bit score': 'bitscore',
+    'Query sequence length': 'qlen',
+    'Subject sequence length': 'slen',
+    'Query frame': 'qframe',
+    'Query coverage per HSP': 'qcovhsp',
+    'Subject coverage per HSP': 'scovhsp',
+}
+
+# Used when a file carries no `# Fields:` line: the order the modules request.
+DEFAULT_FIELDS = ['qseqid', 'sseqid', 'pident', 'length', 'mismatch', 'gapopen',
+                  'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore',
+                  'qlen', 'slen']
+
+EVIDENCE_COLUMNS = ['sample', 'toxin', 'gene', 'n_ranges', 'n_reads',
+                    'n_multigene_reads', 'max_genes_on_one_read', 'example_gene_order']
+
+# One row per read carrying more than one gene of the same toxin. The evidence
+# table already counts these (`n_multigene_reads`), but it counts a read once
+# per gene it carries, so it cannot be pivoted into "how many distinct reads
+# per sample" without double counting. This table can.
+MULTIGENE_COLUMNS = ['sample', 'toxin', 'read_id', 'n_genes', 'gene_order']
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Generate cyanotoxin heatmaps from DIAMOND TSV files using Best-Hit logic.")
-    parser.add_argument('-i', '--input', nargs='+', required=True, help='List of DIAMOND TSV files')
-    parser.add_argument('-o', '--output', default='cyanotoxins_heatmap.pdf', help='Output figure file')
+    parser = argparse.ArgumentParser(
+        description="Summarise cyanotoxin gene hits from DIAMOND TSV files.")
+    parser.add_argument('-i', '--input', nargs='+', required=True,
+                        help='DIAMOND TSV files, one per sample')
+    parser.add_argument('-g', '--genes-db', required=True,
+                        help='The cyanotoxin gene FASTA the alignments were made against. '
+                             'Its headers define the full gene panel, so that genes with no '
+                             'hit are still drawn as zeros.')
+    parser.add_argument('-o', '--output', default='cyanotoxins_heatmap.pdf',
+                        help='Output figure file')
+    parser.add_argument('-e', '--evidence', default=None,
+                        help='Output TSV of per-gene evidence (default: alongside --output)')
+    parser.add_argument('--multigene-output', default=None,
+                        help='Output figure of reads carrying more than one gene of the same '
+                             'toxin (default: alongside --output)')
+    parser.add_argument('--multigene-reads', default=None,
+                        help='Output TSV listing those reads, one row each (default: alongside '
+                             '--output)')
+    parser.add_argument('--min-aln-length', type=int, default=25,
+                        help='Minimum alignment length in amino acids')
+    parser.add_argument('--range-overlap-frac', type=float, default=0.5,
+                        help='Two HSPs are the same query range when they overlap by at least '
+                             'this fraction of the shorter one')
     return parser.parse_args()
 
-def process_diamond_file(input_file, sample_name):
-    """
-    1. Filter aln_length < 25
-    2. Pick best bit_score per qseqid (read)
-    3. Split sseqid by '|': gene is index 0, toxin is index 1
-    """
-    best_hits = {}
 
-    try:
-        with open(input_file, 'r') as f_in:
-            for line in f_in:
-                if line.startswith('#') or not line.strip():
-                    continue
-                
-                parts = line.strip().split('\t')
-                if len(parts) < 12:
-                    continue
-                
-                qseqid = parts[0]
-                sseqid = parts[1]
-                
+def load_gene_panel(path):
+    """Read `gene|toxin|...` FASTA headers into {toxin: [genes]}.
+
+    A sixth `class` field separates `toxin` sequences from `other` ones. The
+    `other` class exists so that a read from a non-toxin NRPS/PKS has somewhere
+    to land instead of being forced onto a toxin gene; those sequences are not
+    toxins, so they get no heatmap panel. Hits against them still reach the
+    evidence table, where the share of ranges landing on them is a per-sample
+    specificity readout. Databases without the field are all treated as toxin
+    sequences, so older ones keep working unchanged.
+    """
+    panel = defaultdict(set)
+    malformed = 0
+    skipped = 0
+
+    with open(path) as handle:
+        for line in handle:
+            if not line.startswith('>'):
+                continue
+            fields = line[1:].strip().split('|')
+            if len(fields) < 2 or not fields[0] or not fields[1]:
+                malformed += 1
+                continue
+            if len(fields) > 5 and fields[5] and fields[5] != 'toxin':
+                skipped += 1
+                continue
+            panel[fields[1]].add(fields[0])
+
+    if not panel:
+        sys.exit(
+            f"ERROR: no 'gene|toxin' headers recovered from {path}.\n"
+            f"       {malformed} header(s) were present but did not parse. The gene database "
+            f"must use pipe-separated headers whose first two fields are the gene name and the "
+            f"toxin name, e.g. '>mcyA|microcystin|BGC0001015|mibig4|CAD29797.1'."
+        )
+
+    if malformed:
+        print(f"Warning: {malformed} header(s) in {path} did not parse and were skipped.",
+              file=sys.stderr)
+    if skipped:
+        print(f"  {skipped} non-toxin ('other') sequence(s) in the database: "
+              f"no panel is drawn for them.")
+
+    return {toxin: sorted(genes) for toxin, genes in panel.items()}
+
+
+def field_index(header_line):
+    """Map short field codes to column indices from a DIAMOND `# Fields:` line."""
+    descriptions = [part.strip() for part in header_line.split(':', 1)[1].split(',')]
+    index = {}
+    for position, description in enumerate(descriptions):
+        code = FIELD_DESCRIPTIONS.get(description)
+        if code:
+            index[code] = position
+    return index
+
+
+def read_hsps(path, min_aln_length):
+    """Yield every HSP of a DIAMOND TSV, grouped per read."""
+    per_read = defaultdict(list)
+    index = {code: position for position, code in enumerate(DEFAULT_FIELDS)}
+    saw_header = False
+
+    with open(path) as handle:
+        for line in handle:
+            if line.startswith('#'):
+                if line.startswith('# Fields:'):
+                    parsed = field_index(line)
+                    if 'qseqid' in parsed and 'sseqid' in parsed:
+                        index = parsed
+                        saw_header = True
+                continue
+
+            if not line.strip():
+                continue
+
+            parts = line.rstrip('\n').split('\t')
+            if len(parts) <= max(index.values()):
+                continue
+
+            try:
+                aln_length = int(parts[index['length']])
+                bitscore = float(parts[index['bitscore']])
+                qstart = int(parts[index['qstart']])
+                qend = int(parts[index['qend']])
+            except (KeyError, ValueError):
+                continue
+
+            if aln_length < min_aln_length:
+                continue
+
+            subject = parts[index['sseqid']].split('|')
+            if len(subject) < 2:
+                continue
+
+            frame = None
+            if 'qframe' in index:
                 try:
-                    aln_length = int(parts[3])
-                    bit_score = float(parts[11])
+                    frame = int(parts[index['qframe']])
                 except ValueError:
-                    continue
+                    frame = None
 
-                if aln_length < 25:
-                    continue
+            low, high = (qstart, qend) if qstart <= qend else (qend, qstart)
+            strand = '+' if (frame > 0 if frame is not None else qstart <= qend) else '-'
 
-                s_parts = sseqid.split('|')
-                if len(s_parts) < 2:
-                    continue
+            per_read[parts[index['qseqid']]].append({
+                'gene': subject[0],
+                'toxin': subject[1],
+                'bitscore': bitscore,
+                'start': low,
+                'end': high,
+                'strand': strand,
+            })
 
-                gene = s_parts[0]
-                toxin = s_parts[1]
+    if not saw_header:
+        print(f"Warning: {os.path.basename(path)} carries no '# Fields:' line; "
+              f"assuming the default column order.", file=sys.stderr)
 
-                # Update if this is a better hit for the same read
-                if qseqid not in best_hits or bit_score > best_hits[qseqid][0]:
-                    best_hits[qseqid] = [bit_score, toxin, gene]
+    return per_read
 
-    except Exception as e:
-        print(f"Error reading {input_file}: {e}")
-        return []
 
-    sample_data = []
-    for _, toxin, gene in best_hits.values():
-        sample_data.append({
-            'sample': sample_name,
+def resolve_ranges(hsps, overlap_frac):
+    """Reduce a read's HSPs to non-overlapping query ranges, best bitscore first.
+
+    This is the per-range best hit that `--range-culling` produces alignments
+    for; taking a single best hit per read instead would discard every gene
+    beyond the highest-scoring one.
+    """
+    accepted = []
+
+    for hsp in sorted(hsps, key=lambda item: -item['bitscore']):
+        length = hsp['end'] - hsp['start'] + 1
+        conflicts = False
+
+        for taken in accepted:
+            overlap = min(taken['end'], hsp['end']) - max(taken['start'], hsp['start']) + 1
+            if overlap <= 0:
+                continue
+            shorter = min(length, taken['end'] - taken['start'] + 1)
+            if shorter > 0 and overlap >= overlap_frac * shorter:
+                conflicts = True
+                break
+
+        if not conflicts:
+            accepted.append(hsp)
+
+    return sorted(accepted, key=lambda item: item['start'])
+
+
+def describe_order(ranges):
+    """Render the observed gene order along a read, e.g. 'mcyA(+)>mcyB(+)'."""
+    return '>'.join(f"{item['gene']}({item['strand']})" for item in ranges)
+
+
+def summarise_sample(path, sample, min_aln_length, overlap_frac):
+    """Per-(toxin, gene) counts, co-location statistics, and the multi-gene
+    reads themselves, for one sample."""
+    stats = defaultdict(lambda: {
+        'n_ranges': 0,
+        'reads': set(),
+        'multigene_reads': set(),
+        'max_genes': 0,
+        'example_order': '',
+    })
+    multigene_reads = []
+
+    for read, hsps in read_hsps(path, min_aln_length).items():
+        ranges = resolve_ranges(hsps, overlap_frac)
+        if not ranges:
+            continue
+
+        # Co-location is only meaningful within one toxin: two genes of the same
+        # cluster on one molecule is evidence, two unrelated toxins is not.
+        by_toxin = defaultdict(list)
+        for item in ranges:
+            by_toxin[item['toxin']].append(item)
+
+        for toxin, items in by_toxin.items():
+            genes = {item['gene'] for item in items}
+            order = describe_order(items)
+
+            for item in items:
+                entry = stats[(toxin, item['gene'])]
+                entry['n_ranges'] += 1
+                entry['reads'].add(read)
+                if len(genes) > 1:
+                    entry['multigene_reads'].add(read)
+                if len(genes) > entry['max_genes']:
+                    entry['max_genes'] = len(genes)
+                    entry['example_order'] = order
+
+            if len(genes) > 1:
+                multigene_reads.append({
+                    'sample': sample,
+                    'toxin': toxin,
+                    'read_id': read,
+                    'n_genes': len(genes),
+                    'gene_order': order,
+                })
+
+    rows = []
+    for (toxin, gene), entry in stats.items():
+        rows.append({
+            'sample': sample,
             'toxin': toxin,
-            'gene': gene
+            'gene': gene,
+            'n_ranges': entry['n_ranges'],
+            'n_reads': len(entry['reads']),
+            'n_multigene_reads': len(entry['multigene_reads']),
+            'max_genes_on_one_read': entry['max_genes'],
+            'example_gene_order': entry['example_order'],
         })
-    return sample_data
 
-def main():
-    args = parse_args()
-    all_data = []
-    
-    for f in args.input:
-        sample_name = os.path.basename(f).replace('.diamond.tsv', '').replace('.tsv', '')
-        print(f"Processing {sample_name}...")
-        all_data.extend(process_diamond_file(f, sample_name))
-            
-    if not all_data:
-        print("No valid hits found across all samples. Exiting.")
-        return
-        
-    df_all = pd.DataFrame(all_data)
-    
-    # Aggregate counts per sample, toxin, and gene
-    counts = df_all.groupby(['toxin', 'sample', 'gene']).size().reset_index(name='count')
-    
-    toxins = sorted(counts['toxin'].unique())
-    n_toxins = len(toxins)
-    
-    # Layout configuration
-    cols_grid = 2
-    rows_grid = math.ceil(n_toxins / cols_grid)
-    
+    return rows, multigene_reads
+
+
+def sample_name(path):
+    return os.path.basename(path).replace('.diamond.tsv', '').replace('.tsv', '')
+
+
+def draw(evidence, panel, samples, output):
+    """One heatmap panel per toxin, over the full gene list of the database."""
+    toxins = sorted(panel)
+    cols_grid = min(2, len(toxins))
+    rows_grid = math.ceil(len(toxins) / cols_grid)
+
     fig, axes = plt.subplots(
-        rows_grid, 
-        cols_grid, 
+        rows_grid,
+        cols_grid,
         figsize=(12 * cols_grid, 8 * rows_grid),
-        squeeze=False
+        squeeze=False,
     )
-    
     flat_axes = axes.flatten()
-    
-    for i, toxin in enumerate(toxins):
-        ax = flat_axes[i]
-        toxin_data = counts[counts['toxin'] == toxin]
-        pivot_df = toxin_data.pivot(index='sample', columns='gene', values='count').fillna(0)
-        
+
+    for position, toxin in enumerate(toxins):
+        ax = flat_axes[position]
+        genes = panel[toxin]
+
+        observed = evidence[evidence['toxin'] == toxin]
+        if observed.empty:
+            pivot = pd.DataFrame(0, index=samples, columns=genes)
+        else:
+            pivot = (observed
+                     .pivot_table(index='sample', columns='gene',
+                                  values='n_ranges', aggfunc='sum')
+                     # Genes and samples with no hit must still be drawn: a panel
+                     # where 1 of 6 mcy genes was found is the classic false
+                     # positive signature and has to be visible as such.
+                     .reindex(index=samples, columns=genes)
+                     .fillna(0))
+
         sns.heatmap(
-            pivot_df,
+            pivot.astype(int),
             cmap='YlGnBu',
             annot=True,
             square=True,
             fmt='g',
             ax=ax,
             linewidths=.5,
-            cbar_kws={'label': 'read count'}
+            vmin=0,
+            cbar_kws={'label': 'alignment ranges'},
         )
 
         ax.set_title(f"toxin: {toxin}", fontsize=16, fontweight='bold', pad=15)
@@ -124,12 +367,127 @@ def main():
         ax.set_ylabel("sample(s)", fontsize=12)
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
 
-    for j in range(i + 1, len(flat_axes)):
-        fig.delaxes(flat_axes[j])
-        
+    for position in range(len(toxins), len(flat_axes)):
+        fig.delaxes(flat_axes[position])
+
     plt.tight_layout()
-    plt.savefig(args.output, bbox_inches='tight')
-    print(f"Successfully generated {args.output}")
+    plt.savefig(output, bbox_inches='tight')
+    plt.close(fig)
+    print(f"Successfully generated {output}")
+
+
+def draw_multigene(multigene, samples, panel, output):
+    """Bar chart of reads carrying more than one gene of the same toxin.
+
+    This is the strongest read-level evidence a group has: a conserved NRPS
+    domain can land a read on one toxin gene by chance, but not on several
+    genes of the same cluster in sequence. Counted per read, not per gene, so
+    a read spanning three genes adds one to its toxin's bar rather than three.
+
+    Restricted to `panel` (the `class == 'toxin'` entries of the gene
+    database), same as the heatmap: an 'other' compound like an
+    anabaenopeptin or a cyanopeptolin is not a cyanotoxin, so co-location on
+    one read there is not evidence of cyanotoxin biosynthesis. Those hits stay
+    in the evidence table but are not drawn here.
+    """
+    multigene = multigene[multigene['toxin'].isin(panel)]
+
+    if multigene.empty:
+        fig, ax = plt.subplots(figsize=(8, 4))
+        ax.axis('off')
+        ax.text(0.5, 0.5,
+                "No read carried more than one gene of the same cyanotoxin.",
+                ha='center', va='center', fontsize=12, wrap=True)
+        plt.savefig(output, bbox_inches='tight')
+        plt.close(fig)
+        print(f"Successfully generated {output}")
+        return
+
+    toxins = sorted(multigene['toxin'].unique())
+    counts = (multigene
+              .groupby(['sample', 'toxin'])['read_id']
+              .nunique()
+              .rename('n_multigene_reads')
+              .reset_index())
+    pivot = (counts
+             .pivot_table(index='sample', columns='toxin', values='n_multigene_reads')
+             .reindex(index=samples, columns=toxins)
+             .fillna(0))
+
+    fig, ax = plt.subplots(figsize=(max(8, 1.5 * len(samples)), 6))
+    pivot.plot(kind='bar', ax=ax, colormap='tab20', edgecolor='black', linewidth=0.5)
+
+    ax.set_xlabel("sample(s)", fontsize=12)
+    ax.set_ylabel("reads carrying >1 gene of the same toxin", fontsize=12)
+    ax.set_title("Multi-gene reads", fontsize=16, fontweight='bold', pad=15)
+    ax.yaxis.get_major_locator().set_params(integer=True)
+    ax.legend(title='toxin', bbox_to_anchor=(1.02, 1), loc='upper left')
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+
+    plt.tight_layout()
+    plt.savefig(output, bbox_inches='tight')
+    plt.close(fig)
+    print(f"Successfully generated {output}")
+
+
+def main():
+    args = parse_args()
+
+    panel = load_gene_panel(args.genes_db)
+    print(f"Gene panel: {sum(len(g) for g in panel.values())} gene(s) "
+          f"across {len(panel)} toxin(s) from {os.path.basename(args.genes_db)}")
+
+    # Every input file is a sample, whether or not it produced a hit: a sample
+    # missing from the figure is indistinguishable from a sample with no toxin
+    # genes, and those mean very different things.
+    samples = sorted(sample_name(path) for path in args.input)
+
+    rows = []
+    multigene_rows = []
+    for path in args.input:
+        sample = sample_name(path)
+        try:
+            sample_rows, sample_multigene = summarise_sample(
+                path, sample, args.min_aln_length, args.range_overlap_frac)
+        except Exception as error:  # a malformed report must not sink the group
+            print(f"Error reading {path}: {error}", file=sys.stderr)
+            continue
+        print(f"{sample}: {sum(row['n_ranges'] for row in sample_rows)} range(s) "
+              f"over {len(sample_rows)} gene(s)")
+        rows.extend(sample_rows)
+        multigene_rows.extend(sample_multigene)
+
+    evidence = pd.DataFrame(rows, columns=EVIDENCE_COLUMNS)
+    evidence = evidence.sort_values(['sample', 'toxin', 'gene']).reset_index(drop=True)
+
+    off_panel = set(evidence['toxin']) - set(panel)
+    if off_panel:
+        other_ranges = int(evidence[evidence['toxin'].isin(off_panel)]['n_ranges'].sum())
+        toxin_ranges = int(evidence[~evidence['toxin'].isin(off_panel)]['n_ranges'].sum())
+        total = other_ranges + toxin_ranges
+        share = 100.0 * other_ranges / total if total else 0.0
+        print(f"Non-toxin assignments: {other_ranges}/{total} range(s) ({share:.1f}%) "
+              f"went to sequences of the 'other' class. They stay in the evidence "
+              f"table and are not drawn.")
+
+    evidence_path = args.evidence or f"{os.path.splitext(args.output)[0]}_read_evidence.tsv"
+    evidence.to_csv(evidence_path, sep='\t', index=False)
+    print(f"Successfully generated {evidence_path}")
+
+    multigene = pd.DataFrame(multigene_rows, columns=MULTIGENE_COLUMNS)
+    multigene = multigene.sort_values(['sample', 'toxin', 'read_id']).reset_index(drop=True)
+
+    multigene_reads_path = (args.multigene_reads
+                             or f"{os.path.splitext(args.output)[0]}_multigene_reads.tsv")
+    multigene.to_csv(multigene_reads_path, sep='\t', index=False)
+    print(f"Successfully generated {multigene_reads_path}")
+
+    multigene_output = (args.multigene_output
+                         or f"{os.path.splitext(args.output)[0]}_multigene_reads.pdf")
+    draw_multigene(multigene, samples, panel, multigene_output)
+
+    draw(evidence, panel, samples, args.output)
+
 
 if __name__ == '__main__':
     main()

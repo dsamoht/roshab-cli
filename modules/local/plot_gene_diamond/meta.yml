@@ -26,15 +26,47 @@ input:
         description: DIAMOND tabular alignments for every sample of the group
         pattern: "*.tsv"
         ontologies: []
+  - - genes_db:
+        type: file
+        description: The cyanotoxin gene FASTA the alignments were made against
+        pattern: "*.{fa,faa,fasta}"
+        ontologies: []
 output:
   pdf:
     - - group_id:
           type: string
           description: Group identifier
-      - "*.pdf":
+      - "*_heatmap.pdf":
           type: file
           description: Cyanotoxin gene heatmap
-          pattern: "*.pdf"
+          pattern: "*_heatmap.pdf"
+          ontologies: []
+  tsv:
+    - - group_id:
+          type: string
+          description: Group identifier
+      - "*_evidence.tsv":
+          type: file
+          description: Per-gene evidence table, including read co-location statistics
+          pattern: "*_evidence.tsv"
+          ontologies: []
+  multigene_pdf:
+    - - group_id:
+          type: string
+          description: Group identifier
+      - "*_multigene_reads.pdf":
+          type: file
+          description: Bar chart of reads carrying more than one gene of the same toxin
+          pattern: "*_multigene_reads.pdf"
+          ontologies: []
+  multigene_tsv:
+    - - group_id:
+          type: string
+          description: Group identifier
+      - "*_multigene_reads.tsv":
+          type: file
+          description: One row per read carrying more than one gene of the same toxin
+          pattern: "*_multigene_reads.tsv"
           ontologies: []
 topics:
   versions:
