@@ -15,6 +15,7 @@ singularity_cache/
 apptainer_cache/
 tests/roshab-cli_out/
 CLAUDE.md
+.claude
 tests/db_dir
 *.dmnd
 .mibig_cache/
