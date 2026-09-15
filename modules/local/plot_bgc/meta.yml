@@ -1,7 +1,7 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
 name: plot_bgc
-description: Plot and summarise the merged BGC calls of a group
+description: Plot and summarise the antiSMASH BGC regions of a group
 keywords:
   - visualisation
   - bgc
@@ -20,10 +20,10 @@ input:
   - - group_id:
         type: string
         description: Group identifier
-    - bgc_tsvs:
+    - antismash_jsons:
         type: file
-        description: Merged BGC tables for every sample of the group
-        pattern: "*.bgc.tsv"
+        description: antiSMASH JSON reports for every sample of the group
+        pattern: "*.json"
         ontologies: []
 output:
   pdf:

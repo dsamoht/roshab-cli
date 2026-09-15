@@ -3,9 +3,6 @@ process ANTISMASH {
     label 'process_high'
 
     conda "${moduleDir}/environment.yml"
-    // Same image as `ANTISMASH_DOWNLOAD`: antiSMASH re-checks its packaged profile
-    // HMMs on every run and rebuilds them when they are missing, which the
-    // biocontainer cannot do as a non-root user. See that module for the details
     container "quay.io/nf-core/antismash:8.0.1--pyhdfd78af_0"
 
     input:

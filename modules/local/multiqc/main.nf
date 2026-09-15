@@ -16,8 +16,6 @@ process MULTIQC {
     tuple val(meta), path("*.html"), emit: report
     tuple val(meta), path("*_data"), emit: data
     tuple val(meta), path("*_plots"), emit: plots, optional: true
-    // MultiQC must not push its versions to the `versions` topic: its input depends on
-    // that topic being resolved, so emitting to it would make the pipeline hang forever.
     tuple val("${task.process}"), val('multiqc'), eval("multiqc --version | sed 's/.* //g'"), emit: versions
 
     when:
