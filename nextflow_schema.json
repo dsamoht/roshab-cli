@@ -29,13 +29,6 @@
                     "description": "The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure.",
                     "fa_icon": "fas fa-folder-open"
                 },
-                "email": {
-                    "type": "string",
-                    "description": "Email address for completion summary.",
-                    "fa_icon": "fas fa-envelope",
-                    "help_text": "Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits. If set in your user config file (`~/.nextflow/config`) then you don't need to specify this on the command line for every run.",
-                    "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$"
-                },
                 "multiqc_title": {
                     "type": "string",
                     "description": "MultiQC report title. Printed as page header, used for filename if not otherwise specified.",
@@ -47,90 +40,69 @@
             "title": "Reference databases",
             "type": "object",
             "fa_icon": "fas fa-database",
-            "description": "Databases used by the taxonomic profiling and cyanotoxin screening steps.",
-            "help_text": "None of these databases are downloaded by the pipeline. Directories and `.tar.gz`/`.tgz` tarballs are both accepted for the database parameters that point at a directory: tarballs are extracted once at the start of the run.",
-            "required": ["kraken_db", "genomes_db", "genes_db"],
+            "description": "Where the Kraken2 index, the genome database and the antiSMASH databases live.",
+            "help_text": "None of these databases are downloaded by the pipeline. Directories and `.tar.gz`/`.tgz` tarballs are both accepted for the database parameters that point at a directory: tarballs are extracted once at the start of the run. `--genes_db` is the exception: the cyanotoxin gene database ships with the pipeline and is used by default.",
             "properties": {
+                "db_dir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Directory holding the reference databases, one per subdirectory: `kraken_db`, `genomes_db` and `antismash_db`.",
+                    "help_text": "The only database flag most runs need. Install the databases into it once with `--install_databases`, then pass the same `--db_dir` to every run. `--kraken_db`, `--genomes_db` and `--antismash_db` each override one entry, for a database that already lives somewhere else.",
+                    "fa_icon": "fas fa-folder-open"
+                },
+                "install_databases": {
+                    "type": "boolean",
+                    "description": "Download the reference databases into `--db_dir`, then exit without running an analysis.",
+                    "help_text": "`--mode` decides what is downloaded: the Kraken2 index and the genome database always, plus the antiSMASH databases with `--mode assembly` or `--mode both`. A database already present in `--db_dir` is left alone, so the command is safe to repeat. `--input` and `--outdir` are not needed on an installation run.",
+                    "fa_icon": "fas fa-download"
+                },
                 "kraken_db": {
                     "type": "string",
                     "format": "path",
                     "exists": true,
-                    "description": "Path to a Kraken2 database (directory or `.tar.gz` tarball).",
-                    "help_text": "Pre-built indexes are available from https://benlangmead.github.io/aws-indexes/k2. The database must contain `ktaxonomy.tsv`, which is used to rebuild the per-sample Kraken2 reports.",
+                    "description": "Path to a Kraken2 database (directory or `.tar.gz` tarball), if not under `--db_dir`.",
+                    "help_text": "Overrides `kraken_db/` under `--db_dir`. Pre-built indexes are available from https://benlangmead.github.io/aws-indexes/k2. The database must contain `ktaxonomy.tsv`, which is used to rebuild the per-sample Kraken2 reports.",
                     "fa_icon": "fas fa-database"
                 },
                 "genomes_db": {
                     "type": "string",
                     "format": "path",
                     "exists": true,
-                    "description": "Path to the genome database used by CoverM (directory of FASTA files or `.tar.gz` tarball).",
-                    "help_text": "The reference set used during development is available at https://zenodo.org/records/19522349/files/cyanobacteriota_ncbi_dRep_n220.tar.gz",
+                    "description": "Path to the genome database used by CoverM (directory of FASTA files or `.tar.gz` tarball), if not under `--db_dir`.",
+                    "help_text": "Overrides `genomes_db/` under `--db_dir`. The reference set used during development is available at https://zenodo.org/records/19522349/files/cyanobacteriota_ncbi_dRep_n220.tar.gz",
                     "fa_icon": "fas fa-dna"
-                },
-                "genes_db": {
-                    "type": "string",
-                    "format": "file-path",
-                    "exists": true,
-                    "description": "Path to the FASTA file of cyanotoxin-related protein sequences used by DIAMOND.",
-                    "help_text": "Available at https://zenodo.org/records/19522349/files/core_cyanotoxin-related_gene_mibig-v4_antismash-v8.faa",
-                    "fa_icon": "fas fa-file-alt"
                 },
                 "antismash_db": {
                     "type": "string",
                     "format": "path",
                     "exists": true,
-                    "description": "Path to the antiSMASH databases (directory or `.tar.gz` tarball). Required with `--mode assembly` or `--mode both`.",
-                    "help_text": "Create with `download-antismash-databases` from the antiSMASH distribution.",
+                    "description": "Path to the antiSMASH databases (directory or `.tar.gz` tarball), if not under `--db_dir`.",
+                    "help_text": "Overrides `antismash_db/` under `--db_dir`. Create with `download-antismash-databases` from the antiSMASH distribution.",
                     "fa_icon": "fas fa-database"
                 },
-                "deepbgc_db": {
+                "genes_db": {
                     "type": "string",
-                    "format": "path",
+                    "format": "file-path",
                     "exists": true,
-                    "description": "Path to the DeepBGC models (directory or `.tar.gz` tarball). Required with `--run_deepbgc`.",
-                    "fa_icon": "fas fa-database"
-                }
-            }
-        },
-        "database_installation": {
-            "title": "Database installation",
-            "type": "object",
-            "fa_icon": "fas fa-download",
-            "description": "Download the reference databases instead of running an analysis.",
-            "help_text": "Setting `--db_dir` switches the run to database installation: the requested databases are downloaded into that directory, one directory per database, and no analysis step runs. Databases that are already present are skipped, so an interrupted install can simply be re-run.",
-            "properties": {
-                "db_dir": {
-                    "type": "string",
-                    "format": "directory-path",
-                    "description": "Directory to install the reference databases into. Setting it runs the database installation and nothing else.",
-                    "help_text": "Each database is installed into its own subdirectory: `kraken_db`, `genomes_db`, `genes_db`, `antismash_db` and `deepbgc_db`. The install run prints the parameter values to use afterwards.",
-                    "fa_icon": "fas fa-folder-open"
-                },
-                "install_databases": {
-                    "type": "string",
-                    "default": "all",
-                    "pattern": "^(all|(kraken|genomes|genes|antismash|deepbgc)(,(kraken|genomes|genes|antismash|deepbgc))*)$",
-                    "description": "Which databases to install with `--db_dir`: `all`, or a comma-separated list of `kraken`, `genomes`, `genes`, `antismash`, `deepbgc`.",
-                    "fa_icon": "fas fa-list-check"
+                    "default": "${projectDir}/assets/cyanotoxin_genes_mibig-4.0_two-class_v2.faa",
+                    "description": "Path to the FASTA file of cyanotoxin-related protein sequences used by DIAMOND.",
+                    "help_text": "The two-class database shipped with the pipeline is used by default, so this only needs setting to screen against a different panel. Headers are `gene|compound|bgc_accession|source|protein_accession|class`, and the sixth field must be `toxin` or `other`: the `other` sequences give a read from an ordinary NRPS/PKS somewhere to land instead of being forced onto a toxin gene. Build a replacement with `bin/build_cyanotoxin_db.py`.",
+                    "fa_icon": "fas fa-file-alt"
                 },
                 "kraken_db_url": {
                     "type": "string",
                     "default": "https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_16_GB_20260626.tar.gz",
-                    "description": "Kraken2 index downloaded by `--db_dir`.",
+                    "description": "Kraken2 index downloaded by `--install_databases`.",
                     "help_text": "The default is the 16 GB capped PlusPF index. Any other index from https://benlangmead.github.io/aws-indexes/k2 can be used instead, as long as it contains `ktaxonomy.tsv`.",
-                    "fa_icon": "fas fa-link"
+                    "fa_icon": "fas fa-link",
+                    "hidden": true
                 },
                 "genomes_db_url": {
                     "type": "string",
                     "default": "https://zenodo.org/records/19522349/files/cyanobacteriota_ncbi_dRep_n220.tar.gz",
-                    "description": "CoverM genome database downloaded by `--db_dir`.",
-                    "fa_icon": "fas fa-link"
-                },
-                "genes_db_url": {
-                    "type": "string",
-                    "default": "https://zenodo.org/records/19522349/files/core_cyanotoxin-related_gene_mibig-v4_antismash-v8.faa",
-                    "description": "Cyanotoxin gene database downloaded by `--db_dir`.",
-                    "fa_icon": "fas fa-link"
+                    "description": "CoverM genome database downloaded by `--install_databases`.",
+                    "fa_icon": "fas fa-link",
+                    "hidden": true
                 }
             }
         },
@@ -310,36 +282,6 @@
                     "enum": ["glimmerhmm", "prodigal", "prodigal-m", "none", "error"],
                     "description": "antiSMASH `--genefinding-tool`.",
                     "fa_icon": "fas fa-search"
-                },
-                "diamond_blastp_id": {
-                    "type": "integer",
-                    "default": 70,
-                    "minimum": 0,
-                    "maximum": 100,
-                    "description": "Minimum percentage identity of the contig-level `diamond blastp` alignments.",
-                    "fa_icon": "fas fa-percent"
-                },
-                "bgc_min_overlap": {
-                    "type": "integer",
-                    "default": 500,
-                    "minimum": 0,
-                    "description": "Overlap (bp) at which two tools are considered to call the same BGC region.",
-                    "help_text": "Applied together with `--bgc_min_overlap_frac`. Confidence in the per-sample `*.bgc.tsv` table is weighted by method: antiSMASH plus another tool is `high`, antiSMASH alone `medium`, two or more non-antiSMASH tools `candidate`, a single non-antiSMASH tool `low`.",
-                    "fa_icon": "fas fa-arrows-alt-h"
-                },
-                "bgc_min_overlap_frac": {
-                    "type": "number",
-                    "default": 0.5,
-                    "minimum": 0,
-                    "maximum": 1,
-                    "description": "Overlap as a fraction of the shorter interval required to merge two BGC calls.",
-                    "help_text": "Checked against each call already merged into a region rather than against the region's running extent, so one long permissive call cannot chain two distinct clusters into a single region.",
-                    "fa_icon": "fas fa-percent"
-                },
-                "run_deepbgc": {
-                    "type": "boolean",
-                    "description": "Add DeepBGC to the antiSMASH + GECCO screening. Requires `--deepbgc_db`.",
-                    "fa_icon": "fas fa-brain"
                 }
             }
         },
@@ -411,28 +353,6 @@
                     "help_text": "The Nextflow `publishDir` option specifies which intermediate files should be saved to the output directory. This option tells the pipeline what method should be used to move these files. See [Nextflow docs](https://www.nextflow.io/docs/latest/process.html#publishdir) for details.",
                     "fa_icon": "fas fa-copy",
                     "enum": ["symlink", "rellink", "link", "copy", "copyNoFollow", "move"],
-                    "hidden": true
-                },
-                "email_on_fail": {
-                    "type": "string",
-                    "description": "Email address for completion summary, only when pipeline fails.",
-                    "fa_icon": "fas fa-exclamation-triangle",
-                    "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$",
-                    "help_text": "An email address to send a summary email to when the pipeline is completed - ONLY sent if the pipeline does not exit successfully.",
-                    "hidden": true
-                },
-                "plaintext_email": {
-                    "type": "boolean",
-                    "description": "Send plain-text email instead of HTML.",
-                    "fa_icon": "fas fa-remove-format",
-                    "hidden": true
-                },
-                "max_multiqc_email_size": {
-                    "type": "string",
-                    "description": "File size limit when attaching MultiQC reports to summary emails.",
-                    "pattern": "^\\d+(\\.\\d+)?\\.?\\s*(K|M|G|T)?B$",
-                    "default": "25.MB",
-                    "fa_icon": "fas fa-file-upload",
                     "hidden": true
                 },
                 "monochrome_logs": {
@@ -507,9 +427,6 @@
         },
         {
             "$ref": "#/$defs/reference_databases"
-        },
-        {
-            "$ref": "#/$defs/database_installation"
         },
         {
             "$ref": "#/$defs/workflow_options"

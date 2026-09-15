@@ -27,7 +27,7 @@ process DIAMOND_BLASTX {
         --db ${db} \\
         --query ${reads} \\
         --out ${prefix}.tsv \\
-        --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen qframe \\
+        --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen qframe qcovhsp scovhsp \\
         --header \\
         --threads ${task.cpus}
     """

@@ -65,6 +65,12 @@ DEFAULT_FIELDS = ['qseqid', 'sseqid', 'pident', 'length', 'mismatch', 'gapopen',
 EVIDENCE_COLUMNS = ['sample', 'toxin', 'gene', 'n_ranges', 'n_reads',
                     'n_multigene_reads', 'max_genes_on_one_read', 'example_gene_order']
 
+# One row per read carrying more than one gene of the same toxin. The evidence
+# table already counts these (`n_multigene_reads`), but it counts a read once
+# per gene it carries, so it cannot be pivoted into "how many distinct reads
+# per sample" without double counting. This table can.
+MULTIGENE_COLUMNS = ['sample', 'toxin', 'read_id', 'n_genes', 'gene_order']
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -79,6 +85,12 @@ def parse_args():
                         help='Output figure file')
     parser.add_argument('-e', '--evidence', default=None,
                         help='Output TSV of per-gene evidence (default: alongside --output)')
+    parser.add_argument('--multigene-output', default=None,
+                        help='Output figure of reads carrying more than one gene of the same '
+                             'toxin (default: alongside --output)')
+    parser.add_argument('--multigene-reads', default=None,
+                        help='Output TSV listing those reads, one row each (default: alongside '
+                             '--output)')
     parser.add_argument('--min-aln-length', type=int, default=25,
                         help='Minimum alignment length in amino acids')
     parser.add_argument('--range-overlap-frac', type=float, default=0.5,
@@ -242,7 +254,8 @@ def describe_order(ranges):
 
 
 def summarise_sample(path, sample, min_aln_length, overlap_frac):
-    """Per-(toxin, gene) counts and co-location statistics for one sample."""
+    """Per-(toxin, gene) counts, co-location statistics, and the multi-gene
+    reads themselves, for one sample."""
     stats = defaultdict(lambda: {
         'n_ranges': 0,
         'reads': set(),
@@ -250,6 +263,7 @@ def summarise_sample(path, sample, min_aln_length, overlap_frac):
         'max_genes': 0,
         'example_order': '',
     })
+    multigene_reads = []
 
     for read, hsps in read_hsps(path, min_aln_length).items():
         ranges = resolve_ranges(hsps, overlap_frac)
@@ -276,6 +290,15 @@ def summarise_sample(path, sample, min_aln_length, overlap_frac):
                     entry['max_genes'] = len(genes)
                     entry['example_order'] = order
 
+            if len(genes) > 1:
+                multigene_reads.append({
+                    'sample': sample,
+                    'toxin': toxin,
+                    'read_id': read,
+                    'n_genes': len(genes),
+                    'gene_order': order,
+                })
+
     rows = []
     for (toxin, gene), entry in stats.items():
         rows.append({
@@ -289,7 +312,7 @@ def summarise_sample(path, sample, min_aln_length, overlap_frac):
             'example_gene_order': entry['example_order'],
         })
 
-    return rows
+    return rows, multigene_reads
 
 
 def sample_name(path):
@@ -349,6 +372,61 @@ def draw(evidence, panel, samples, output):
 
     plt.tight_layout()
     plt.savefig(output, bbox_inches='tight')
+    plt.close(fig)
+    print(f"Successfully generated {output}")
+
+
+def draw_multigene(multigene, samples, panel, output):
+    """Bar chart of reads carrying more than one gene of the same toxin.
+
+    This is the strongest read-level evidence a group has: a conserved NRPS
+    domain can land a read on one toxin gene by chance, but not on several
+    genes of the same cluster in sequence. Counted per read, not per gene, so
+    a read spanning three genes adds one to its toxin's bar rather than three.
+
+    Restricted to `panel` (the `class == 'toxin'` entries of the gene
+    database), same as the heatmap: an 'other' compound like an
+    anabaenopeptin or a cyanopeptolin is not a cyanotoxin, so co-location on
+    one read there is not evidence of cyanotoxin biosynthesis. Those hits stay
+    in the evidence table but are not drawn here.
+    """
+    multigene = multigene[multigene['toxin'].isin(panel)]
+
+    if multigene.empty:
+        fig, ax = plt.subplots(figsize=(8, 4))
+        ax.axis('off')
+        ax.text(0.5, 0.5,
+                "No read carried more than one gene of the same cyanotoxin.",
+                ha='center', va='center', fontsize=12, wrap=True)
+        plt.savefig(output, bbox_inches='tight')
+        plt.close(fig)
+        print(f"Successfully generated {output}")
+        return
+
+    toxins = sorted(multigene['toxin'].unique())
+    counts = (multigene
+              .groupby(['sample', 'toxin'])['read_id']
+              .nunique()
+              .rename('n_multigene_reads')
+              .reset_index())
+    pivot = (counts
+             .pivot_table(index='sample', columns='toxin', values='n_multigene_reads')
+             .reindex(index=samples, columns=toxins)
+             .fillna(0))
+
+    fig, ax = plt.subplots(figsize=(max(8, 1.5 * len(samples)), 6))
+    pivot.plot(kind='bar', ax=ax, colormap='tab20', edgecolor='black', linewidth=0.5)
+
+    ax.set_xlabel("sample(s)", fontsize=12)
+    ax.set_ylabel("reads carrying >1 gene of the same toxin", fontsize=12)
+    ax.set_title("Multi-gene reads", fontsize=16, fontweight='bold', pad=15)
+    ax.yaxis.get_major_locator().set_params(integer=True)
+    ax.legend(title='toxin', bbox_to_anchor=(1.02, 1), loc='upper left')
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+
+    plt.tight_layout()
+    plt.savefig(output, bbox_inches='tight')
+    plt.close(fig)
     print(f"Successfully generated {output}")
 
 
@@ -365,17 +443,19 @@ def main():
     samples = sorted(sample_name(path) for path in args.input)
 
     rows = []
+    multigene_rows = []
     for path in args.input:
         sample = sample_name(path)
         try:
-            sample_rows = summarise_sample(path, sample, args.min_aln_length,
-                                           args.range_overlap_frac)
-        except OSError as error:
+            sample_rows, sample_multigene = summarise_sample(
+                path, sample, args.min_aln_length, args.range_overlap_frac)
+        except Exception as error:  # a malformed report must not sink the group
             print(f"Error reading {path}: {error}", file=sys.stderr)
             continue
         print(f"{sample}: {sum(row['n_ranges'] for row in sample_rows)} range(s) "
               f"over {len(sample_rows)} gene(s)")
         rows.extend(sample_rows)
+        multigene_rows.extend(sample_multigene)
 
     evidence = pd.DataFrame(rows, columns=EVIDENCE_COLUMNS)
     evidence = evidence.sort_values(['sample', 'toxin', 'gene']).reset_index(drop=True)
@@ -393,6 +473,18 @@ def main():
     evidence_path = args.evidence or f"{os.path.splitext(args.output)[0]}_read_evidence.tsv"
     evidence.to_csv(evidence_path, sep='\t', index=False)
     print(f"Successfully generated {evidence_path}")
+
+    multigene = pd.DataFrame(multigene_rows, columns=MULTIGENE_COLUMNS)
+    multigene = multigene.sort_values(['sample', 'toxin', 'read_id']).reset_index(drop=True)
+
+    multigene_reads_path = (args.multigene_reads
+                             or f"{os.path.splitext(args.output)[0]}_multigene_reads.tsv")
+    multigene.to_csv(multigene_reads_path, sep='\t', index=False)
+    print(f"Successfully generated {multigene_reads_path}")
+
+    multigene_output = (args.multigene_output
+                         or f"{os.path.splitext(args.output)[0]}_multigene_reads.pdf")
+    draw_multigene(multigene, samples, panel, multigene_output)
 
     draw(evidence, panel, samples, args.output)
 

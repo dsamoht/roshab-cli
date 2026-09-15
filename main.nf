@@ -37,6 +37,7 @@ include { SPLIT_KRAKEN_OUTPUT                          } from './modules/local/k
 
 include { PIPELINE_COMPLETION                          } from './subworkflows/local/pipeline_completion'
 include { PIPELINE_INITIALISATION                      } from './subworkflows/local/pipeline_initialisation'
+include { databasePath                                 } from './subworkflows/local/pipeline_initialisation'
 include { methodsDescriptionText                       } from './subworkflows/local/pipeline_initialisation'
 
 include { paramsSummaryMap                             } from 'plugin/nf-schema'
@@ -60,15 +61,16 @@ workflow ROSHAB_CLI {
     def ch_multiqc_files = channel.empty()
 
     //
-    // Reference databases: directories and tarballs are both accepted
+    // Reference databases: `--db_dir` supplies all of them, a per-database flag
+    // overrides one, and directories and tarballs are both accepted
     //
     ch_kraken_db = PREP_KRAKEN_DB(
-        channel.fromPath(params.kraken_db, checkIfExists: true),
+        channel.fromPath(databasePath(params.kraken_db, 'kraken_db')),
         'kraken_db',
     ).db.first()
 
     ch_genomes_db = PREP_GENOMES_DB(
-        channel.fromPath(params.genomes_db, checkIfExists: true),
+        channel.fromPath(databasePath(params.genomes_db, 'genomes_db')),
         'genomes_db',
     ).db.first()
 
@@ -175,6 +177,8 @@ workflow ROSHAB_CLI {
     ch_diamond_tsv = channel.empty()
     ch_diamond_plot = channel.empty()
     ch_diamond_evidence = channel.empty()
+    ch_diamond_multigene_plot = channel.empty()
+    ch_diamond_multigene_tsv = channel.empty()
 
     if (params.mode in ['reads', 'both']) {
         DIAMOND_BLASTX(ch_qc_reads, ch_genes_db)
@@ -191,6 +195,8 @@ workflow ROSHAB_CLI {
         PLOT_GENE_DIAMOND_READS(ch_heatmap_in, ch_genes_db)
         ch_diamond_plot = PLOT_GENE_DIAMOND_READS.out.pdf
         ch_diamond_evidence = PLOT_GENE_DIAMOND_READS.out.tsv
+        ch_diamond_multigene_plot = PLOT_GENE_DIAMOND_READS.out.multigene_pdf
+        ch_diamond_multigene_tsv = PLOT_GENE_DIAMOND_READS.out.multigene_tsv
     }
 
     //
@@ -200,20 +206,13 @@ workflow ROSHAB_CLI {
     def ch_assembly = [
         contigs: channel.empty(),
         assembly_stats: channel.empty(),
-        proteins: channel.empty(),
-        blastp_tsv: channel.empty(),
-        blastp_plot: channel.empty(),
-        blastp_evidence: channel.empty(),
         antismash_results: channel.empty(),
-        gecco_results: channel.empty(),
-        deepbgc_tsv: channel.empty(),
-        bgc_tsv: channel.empty(),
         bgc_plot: channel.empty(),
         bgc_summary: channel.empty(),
     ]
 
     if (params.mode in ['assembly', 'both']) {
-        ch_assembly = ASSEMBLY_BGC(ch_qc_reads, ch_genes_db)
+        ch_assembly = ASSEMBLY_BGC(ch_qc_reads)
     }
 
     //
@@ -269,36 +268,30 @@ workflow ROSHAB_CLI {
     )
 
     emit:
-    qc_reads          = ch_qc_reads
-    nanoplot_raw_html = LONGREAD_QC.out.nanoplot_raw_html
-    nanoplot_qc_html  = LONGREAD_QC.out.nanoplot_qc_html
-    kraken_stdout     = ch_kraken_stdout
-    kraken_report     = KRAKENTOOLS_MAKEKREPORT.out.report
-    bracken_report    = BRACKEN.out.report
-    bracken_tsv       = BRACKEN.out.tsv
-    bracken_mpa       = KRAKENTOOLS_KREPORT2MPA.out.mpa
-    combined_mpa      = KRAKENTOOLS_COMBINEMPA.out.mpa
-    kraken_doc        = PLOT_KRAKEN.out.pdf
-    diamond_tsv       = ch_diamond_tsv
-    diamond_plot      = ch_diamond_plot
-    diamond_evidence  = ch_diamond_evidence
-    coverm_genome_out = COVERM.out.tsv
-    coverm_plot_out   = PLOT_COVERM.out.pdf
-    contigs           = ch_assembly.contigs
-    assembly_stats    = ch_assembly.assembly_stats
-    proteins          = ch_assembly.proteins
-    blastp_tsv        = ch_assembly.blastp_tsv
-    blastp_plot       = ch_assembly.blastp_plot
-    blastp_evidence   = ch_assembly.blastp_evidence
-    antismash_results = ch_assembly.antismash_results
-    gecco_results     = ch_assembly.gecco_results
-    deepbgc_tsv       = ch_assembly.deepbgc_tsv
-    bgc_tsv           = ch_assembly.bgc_tsv
-    bgc_plot          = ch_assembly.bgc_plot
-    bgc_summary       = ch_assembly.bgc_summary
-    multiqc_html      = MULTIQC.out.report
-    multiqc_data      = MULTIQC.out.data
-    multiqc_report    = MULTIQC.out.report.map { _meta, report -> [report] }.toList()
+    qc_reads               = ch_qc_reads
+    nanoplot_raw_html      = LONGREAD_QC.out.nanoplot_raw_html
+    nanoplot_qc_html       = LONGREAD_QC.out.nanoplot_qc_html
+    kraken_stdout          = ch_kraken_stdout
+    kraken_report          = KRAKENTOOLS_MAKEKREPORT.out.report
+    bracken_report         = BRACKEN.out.report
+    bracken_tsv            = BRACKEN.out.tsv
+    bracken_mpa            = KRAKENTOOLS_KREPORT2MPA.out.mpa
+    combined_mpa           = KRAKENTOOLS_COMBINEMPA.out.mpa
+    kraken_doc             = PLOT_KRAKEN.out.pdf
+    diamond_tsv            = ch_diamond_tsv
+    diamond_plot           = ch_diamond_plot
+    diamond_evidence       = ch_diamond_evidence
+    diamond_multigene_plot = ch_diamond_multigene_plot
+    diamond_multigene_tsv  = ch_diamond_multigene_tsv
+    coverm_genome_out      = COVERM.out.tsv
+    coverm_plot_out        = PLOT_COVERM.out.pdf
+    contigs                = ch_assembly.contigs
+    assembly_stats         = ch_assembly.assembly_stats
+    antismash_results      = ch_assembly.antismash_results
+    bgc_plot               = ch_assembly.bgc_plot
+    bgc_summary            = ch_assembly.bgc_summary
+    multiqc_html           = MULTIQC.out.report
+    multiqc_data           = MULTIQC.out.data
 }
 
 /*
@@ -311,10 +304,11 @@ workflow {
 
     main:
 
-    // `--db_dir` switches the run to database installation: the databases are
-    // downloaded into that directory and nothing else runs. `-entry` is not an
-    // option here - the strict parser only ever runs the entry workflow below.
-    def install_only = params.db_dir != null
+    // `--install_databases` switches the run to database installation: the
+    // databases are downloaded into `--db_dir` and nothing else runs. `-entry` is
+    // not an option here - the strict parser only ever runs the entry workflow
+    // below.
+    def install_only = params.install_databases as boolean
 
     if (install_only) {
         //
@@ -346,49 +340,37 @@ workflow {
         //
         // SUBWORKFLOW: Run completion tasks
         //
-        PIPELINE_COMPLETION(
-            params.email,
-            params.email_on_fail,
-            params.plaintext_email,
-            params.outdir,
-            params.monochrome_logs,
-            ROSHAB_CLI.out.multiqc_report,
-        )
+        PIPELINE_COMPLETION(params.monochrome_logs)
     }
 
     publish:
     // `publish:` is evaluated whichever branch ran, so every target falls back to
     // an empty channel on a database installation run, where `ROSHAB_CLI` was
     // never invoked and has no outputs to publish.
-    qc_reads          = install_only ? channel.empty() : ROSHAB_CLI.out.qc_reads
-    nanoplot_raw_html = install_only ? channel.empty() : ROSHAB_CLI.out.nanoplot_raw_html
-    nanoplot_qc_html  = install_only ? channel.empty() : ROSHAB_CLI.out.nanoplot_qc_html
-    kraken_stdout     = install_only ? channel.empty() : ROSHAB_CLI.out.kraken_stdout
-    kraken_report     = install_only ? channel.empty() : ROSHAB_CLI.out.kraken_report
-    bracken_report    = install_only ? channel.empty() : ROSHAB_CLI.out.bracken_report
-    bracken_tsv       = install_only ? channel.empty() : ROSHAB_CLI.out.bracken_tsv
-    bracken_mpa       = install_only ? channel.empty() : ROSHAB_CLI.out.bracken_mpa
-    combined_mpa      = install_only ? channel.empty() : ROSHAB_CLI.out.combined_mpa
-    kraken_doc        = install_only ? channel.empty() : ROSHAB_CLI.out.kraken_doc
-    diamond_tsv       = install_only ? channel.empty() : ROSHAB_CLI.out.diamond_tsv
-    diamond_plot      = install_only ? channel.empty() : ROSHAB_CLI.out.diamond_plot
-    diamond_evidence  = install_only ? channel.empty() : ROSHAB_CLI.out.diamond_evidence
-    coverm_genome_out = install_only ? channel.empty() : ROSHAB_CLI.out.coverm_genome_out
-    coverm_plot_out   = install_only ? channel.empty() : ROSHAB_CLI.out.coverm_plot_out
-    contigs           = install_only ? channel.empty() : ROSHAB_CLI.out.contigs
-    assembly_stats    = install_only ? channel.empty() : ROSHAB_CLI.out.assembly_stats
-    proteins          = install_only ? channel.empty() : ROSHAB_CLI.out.proteins
-    blastp_tsv        = install_only ? channel.empty() : ROSHAB_CLI.out.blastp_tsv
-    blastp_plot       = install_only ? channel.empty() : ROSHAB_CLI.out.blastp_plot
-    blastp_evidence   = install_only ? channel.empty() : ROSHAB_CLI.out.blastp_evidence
-    antismash_results = install_only ? channel.empty() : ROSHAB_CLI.out.antismash_results
-    gecco_results     = install_only ? channel.empty() : ROSHAB_CLI.out.gecco_results
-    deepbgc_tsv       = install_only ? channel.empty() : ROSHAB_CLI.out.deepbgc_tsv
-    bgc_tsv           = install_only ? channel.empty() : ROSHAB_CLI.out.bgc_tsv
-    bgc_plot          = install_only ? channel.empty() : ROSHAB_CLI.out.bgc_plot
-    bgc_summary       = install_only ? channel.empty() : ROSHAB_CLI.out.bgc_summary
-    multiqc_html      = install_only ? channel.empty() : ROSHAB_CLI.out.multiqc_html
-    multiqc_data      = install_only ? channel.empty() : ROSHAB_CLI.out.multiqc_data
+    qc_reads               = install_only ? channel.empty() : ROSHAB_CLI.out.qc_reads
+    nanoplot_raw_html      = install_only ? channel.empty() : ROSHAB_CLI.out.nanoplot_raw_html
+    nanoplot_qc_html       = install_only ? channel.empty() : ROSHAB_CLI.out.nanoplot_qc_html
+    kraken_stdout          = install_only ? channel.empty() : ROSHAB_CLI.out.kraken_stdout
+    kraken_report          = install_only ? channel.empty() : ROSHAB_CLI.out.kraken_report
+    bracken_report         = install_only ? channel.empty() : ROSHAB_CLI.out.bracken_report
+    bracken_tsv            = install_only ? channel.empty() : ROSHAB_CLI.out.bracken_tsv
+    bracken_mpa            = install_only ? channel.empty() : ROSHAB_CLI.out.bracken_mpa
+    combined_mpa           = install_only ? channel.empty() : ROSHAB_CLI.out.combined_mpa
+    kraken_doc             = install_only ? channel.empty() : ROSHAB_CLI.out.kraken_doc
+    diamond_tsv            = install_only ? channel.empty() : ROSHAB_CLI.out.diamond_tsv
+    diamond_plot           = install_only ? channel.empty() : ROSHAB_CLI.out.diamond_plot
+    diamond_evidence       = install_only ? channel.empty() : ROSHAB_CLI.out.diamond_evidence
+    diamond_multigene_plot = install_only ? channel.empty() : ROSHAB_CLI.out.diamond_multigene_plot
+    diamond_multigene_tsv  = install_only ? channel.empty() : ROSHAB_CLI.out.diamond_multigene_tsv
+    coverm_genome_out      = install_only ? channel.empty() : ROSHAB_CLI.out.coverm_genome_out
+    coverm_plot_out        = install_only ? channel.empty() : ROSHAB_CLI.out.coverm_plot_out
+    contigs                = install_only ? channel.empty() : ROSHAB_CLI.out.contigs
+    assembly_stats         = install_only ? channel.empty() : ROSHAB_CLI.out.assembly_stats
+    antismash_results      = install_only ? channel.empty() : ROSHAB_CLI.out.antismash_results
+    bgc_plot               = install_only ? channel.empty() : ROSHAB_CLI.out.bgc_plot
+    bgc_summary            = install_only ? channel.empty() : ROSHAB_CLI.out.bgc_summary
+    multiqc_html           = install_only ? channel.empty() : ROSHAB_CLI.out.multiqc_html
+    multiqc_data           = install_only ? channel.empty() : ROSHAB_CLI.out.multiqc_data
 }
 
 /*
@@ -442,6 +424,12 @@ output {
     diamond_evidence {
         path { group_id, _file -> "group_${group_id}/diamond" }
     }
+    diamond_multigene_plot {
+        path { group_id, _file -> "group_${group_id}/figures" }
+    }
+    diamond_multigene_tsv {
+        path { group_id, _file -> "group_${group_id}/diamond" }
+    }
     coverm_genome_out {
         path { group_id, _file -> "group_${group_id}/coverm" }
     }
@@ -454,29 +442,8 @@ output {
     assembly_stats {
         path { meta, _file -> "group_${meta.group}/assembly" }
     }
-    proteins {
-        path { meta, _file -> "group_${meta.group}/assembly/proteins" }
-    }
-    blastp_tsv {
-        path { meta, _file -> "group_${meta.group}/diamond_contigs" }
-    }
-    blastp_plot {
-        path { group_id, _file -> "group_${group_id}/figures" }
-    }
-    blastp_evidence {
-        path { group_id, _file -> "group_${group_id}/diamond_contigs" }
-    }
     antismash_results {
         path { meta, _file -> "group_${meta.group}/bgc/antismash" }
-    }
-    gecco_results {
-        path { meta, _file -> "group_${meta.group}/bgc/gecco" }
-    }
-    deepbgc_tsv {
-        path { meta, _file -> "group_${meta.group}/bgc/deepbgc" }
-    }
-    bgc_tsv {
-        path { meta, _file -> "group_${meta.group}/bgc" }
     }
     bgc_plot {
         path { group_id, _file -> "group_${group_id}/figures" }

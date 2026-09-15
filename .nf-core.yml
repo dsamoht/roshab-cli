@@ -16,6 +16,11 @@ lint:
     - report.enabled
     - trace.enabled
     - dag.enabled
+    # The gene database ships with the pipeline, so its default is written as
+    # `${projectDir}/assets/...` in both files. The linter resolves the variable
+    # in nextflow.config but compares it against the literal string in the schema.
+    - config_defaults:
+        - params.genes_db
   # Not an nf-core-hosted pipeline: no nf-core logo, CODE_OF_CONDUCT or
   # .github/workflows/awsfulltest.yml.
   files_exist:
@@ -40,6 +45,12 @@ lint:
     # No full-size test: `-profile test` (a viral Kraken2 index and a two-genome
     # CoverM database) is the only test profile.
     - conf/test_full.config
+    # No completion e-mail: the pipeline prints a run summary and nothing more, so
+    # the `--email` parameters, the templates below and `completionEmail()` in
+    # `subworkflows/nf-core/utils_nfcore_pipeline` (see its `.diff`) are all gone.
+    - assets/email_template.html
+    - assets/email_template.txt
+    - assets/sendmail_template.txt
   # The generated report comment links to nf-co.re/<pipeline>, which does not
   # exist for a pipeline hosted outside the nf-core organisation.
   multiqc_config:

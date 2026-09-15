@@ -18,8 +18,8 @@ nextflow run . -profile test,docker --outdir results
 nextflow run . -profile test,docker --mode assembly --outdir results --antismash_db <PATH>
 
 # Install the reference databases (no analysis runs; `--outdir`/`--input` not needed)
-nextflow run . -profile docker --db_dir <PATH>
-nextflow run . -profile docker --db_dir <PATH> --install_databases kraken,genomes,genes
+nextflow run . -profile docker --db_dir <PATH> --install_databases
+nextflow run . -profile docker --db_dir <PATH> --install_databases --mode both  # adds antismash_db
 
 # Tests. nf-test.config sets testsDir="." and profile="test"; tests/nextflow.config
 # points pipelines_testdata_base_path at tests/data/ on the `main` branch (i.e. remote,
@@ -47,7 +47,7 @@ workflows/longread_qc/              NanoPlot(raw) → Chopper → NanoPlot(qc)
 workflows/assembly_bgc/             assembly, gene calling and BGC screening
 workflows/db_install/               `--db_dir` route: download the reference databases
 subworkflows/local/pipeline_initialisation/   help, validation, sample sheet, shared helper functions
-subworkflows/local/pipeline_completion/       completion email and run summary
+subworkflows/local/pipeline_completion/       run summary printed on completion
 subworkflows/nf-core/               vendored nf-core utils (tracked in modules.json)
 modules/local/<tool>[/<subtool>]/   main.nf + environment.yml + meta.yml
 bin/*.py                            helper scripts, on PATH inside the bio-utils container
@@ -67,17 +67,24 @@ each. `ASSEMBLY_BGC` always emits its full output map — `ROSHAB_CLI` initialis
 `channel.empty()` when the route is off, so the `emit:`/`publish:`/`output {}` lists stay identical
 in every mode. Adding an output means touching all three lists.
 
-**`--db_dir` is a second route through the same entry workflow.** The strict parser rejects
-`-entry`, so the entry `workflow {}` branches instead: with `--db_dir` set it runs `DB_INSTALL`
-and nothing else — no `PIPELINE_INITIALISATION`, so no schema validation either (`DB_INSTALL`
-validates `--install_databases` itself). Every `publish:` target is therefore
+**`--db_dir` names the databases; `--install_databases` downloads them.** `--db_dir` is the
+one database flag a run needs: `databasePath()` in `subworkflows/local/pipeline_initialisation/`
+resolves each database to `<db_dir>/<name>` unless `--kraken_db` / `--genomes_db` /
+`--antismash_db` overrides that one, and the subdirectory name is always the parameter name.
+`validateInputParameters()` calls it for every database the mode needs, so a missing one fails
+before any process starts; `ROSHAB_CLI` and `ASSEMBLY_BGC` then call it again to build the
+channels. Adding a database means one `databasePath()` call, not a new required parameter.
+
+**Installation is a second route through the same entry workflow.** The strict parser rejects
+`-entry`, so the entry `workflow {}` branches instead: with `--install_databases` set it runs
+`DB_INSTALL` and nothing else — no `PIPELINE_INITIALISATION`, so no schema validation either
+(`DB_INSTALL` checks `--db_dir` and `--mode` itself). Every `publish:` target is therefore
 `install_only ? channel.empty() : ROSHAB_CLI.out.<name>`; a new output means one more ternary.
-The install processes (`INSTALL_DB`, `ANTISMASH_DOWNLOAD`, `DEEPBGC_DOWNLOAD`) write straight into
-`--db_dir` with `storeDir` — set in `conf/modules.config`, null on every other run — which is what
-makes an already-installed database be skipped. `storeDir` rejects `eval`/topic outputs, so those
-processes emit no `versions` topic. Pfam is the sharp edge: antiSMASH and DeepBGC each fetch their
-own release from `ftp.ebi.ac.uk`, which truncates concurrent downloads — hence the ordering token
-input on `DEEPBGC_DOWNLOAD` and the `error_retry` labels.
+`--mode` picks what is installed, so there is no separate database-selection parameter. The
+install processes (`INSTALL_DB`, `ANTISMASH_DOWNLOAD`) write straight into `--db_dir` with
+`storeDir` — set in `conf/modules.config`, null on every other run — which is what makes an
+already-installed database be skipped. `storeDir` rejects `eval`/topic outputs, so those
+processes emit no `versions` topic.
 
 **`meta.group` is the fan-in key.** Per-sample channels are `[meta, file]`; group-level channels are
 `[group_id, files]` after `.map { meta, f -> tuple(meta.group, ...) }.groupTuple()`. Sort by
@@ -89,9 +96,9 @@ concatenates every sample into one `[id: 'all']` channel item, and `SPLIT_KRAKEN
 per-sample files from those IDs. The full `meta` is re-attached by joining on `kraken_file.simpleName`
 against the samplesheet. Anything that alters read IDs breaks this round trip.
 
-**Reference databases.** `--kraken_db`, `--genomes_db`, `--antismash_db` and `--deepbgc_db` all accept
-a directory or a `.tar.gz`/`.tgz`, normalised by the `DECOMPRESS` module (aliased once per database)
-and pinned with `.first()` into a value channel. None are downloaded by the pipeline.
+**Reference databases.** `--kraken_db`, `--genomes_db` and `--antismash_db` all accept a directory
+or a `.tar.gz`/`.tgz`, normalised by the `DECOMPRESS` module (aliased once per database) and pinned
+with `.first()` into a value channel. An analysis run never downloads one.
 
 **Publishing uses the workflow output definition**, not `publishDir`. Paths live in the `output {}`
 block of `main.nf`; `conf/modules.config` carries only `ext.args` / `ext.prefix` / resource overrides.
